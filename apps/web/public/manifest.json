@@ -1,0 +1,52 @@
+{
+  "name": "CONVIA — Personal Continuity Engine",
+  "short_name": "CONVIA",
+  "description": "Never drop the thread. CONVIA watches your commitments, protects what matters, and closes important loops before they slip.",
+  "start_url": "/life",
+  "display": "standalone",
+  "background_color": "#08090C",
+  "theme_color": "#123F30",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "lifestyle", "utilities"],
+  "service_worker": {
+    "src": "/sw.js",
+    "scope": "/"
+  },
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/life",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Commitments",
+      "short_name": "Commits",
+      "url": "/commitments",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Decisions",
+      "short_name": "Decide",
+      "url": "/decisions",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

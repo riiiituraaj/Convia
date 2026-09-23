@@ -1,0 +1,289 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   CONVIA design tokens
+   ========================================================================== */
+:root {
+  color-scheme: light;
+
+  --brand-deep: #0b2f24;
+  --brand-default: #123f30;
+  --brand-mid: #246247;
+  --brand-accent: #25a866;
+  --brand-light: #d9f4e2;
+  --brand-pale: #eef9f2;
+
+  --surface-muted: #fbfdfc;
+  --surface-sunken: #f4f8f6;
+
+  --color-background: #f7faf8;
+  --color-surface: #ffffff;
+
+  --color-text: #101816;
+  --color-text-secondary: #52625c;
+  --color-text-muted: #7b8883;
+
+  --color-border: #e1e9e4;
+  --color-border-subtle: #edf2ef;
+  --color-border-strong: #dce6e1;
+
+  --color-danger: #f04444;
+  --color-danger-light: #fdecec;
+  --color-warning: #f5a623;
+  --color-warning-light: #fff4de;
+  --color-info: #1677e8;
+  --color-info-light: #eaf3ff;
+
+  --gradient-hero: linear-gradient(135deg, #0b3024 0%, #174c38 45%, #2b6a50 100%);
+  --gradient-hero-highlight: radial-gradient(
+    circle at 20% 20%,
+    rgba(74, 180, 125, 0.16),
+    transparent 45%
+  );
+  --gradient-soft: linear-gradient(135deg, #eef9f2 0%, #d9f4e2 100%);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-card: 0 4px 20px rgba(20, 50, 40, 0.045);
+  --shadow-card-hover: 0 10px 28px rgba(20, 50, 40, 0.08);
+  --shadow-pop: 0 20px 60px rgba(11, 47, 36, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(37, 168, 102, 0.1);
+
+  --sidebar-width: 264px;
+  --topbar-height: 68px;
+
+  --scrollbar-thumb: rgba(16, 24, 22, 0.14);
+  --scrollbar-thumb-hover: rgba(16, 24, 22, 0.24);
+
+  --react-flow-bg: #fbfdfc;
+  --react-flow-node-bg: #ffffff;
+  --react-flow-controls-bg: #ffffff;
+}
+
+/* Dark theme — primary visual identity per spec (#08090C) */
+.dark {
+  color-scheme: dark;
+
+  --brand-deep: #0d3a2b;
+  --brand-default: #1a5c42;
+  --brand-mid: #2d8a62;
+  --brand-accent: #3ddc84;
+  --brand-light: #143528;
+  --brand-pale: #0f2a1f;
+
+  --surface-muted: #12151c;
+  --surface-sunken: #0b0d12;
+
+  --color-background: #08090c;
+  --color-surface: #0f1218;
+
+  --color-text: #e8ecef;
+  --color-text-secondary: #9aa5b1;
+  --color-text-muted: #6b7684;
+
+  --color-border: #1c2129;
+  --color-border-subtle: #151920;
+  --color-border-strong: #2a313c;
+
+  --color-danger: #ff6b6b;
+  --color-danger-light: #2a1416;
+  --color-warning: #ffb347;
+  --color-warning-light: #2a2010;
+  --color-info: #4d9fff;
+  --color-info-light: #0f1d33;
+
+  --gradient-hero: linear-gradient(135deg, #0a1a14 0%, #0f2e22 45%, #164a36 100%);
+  --gradient-hero-highlight: radial-gradient(
+    circle at 20% 20%,
+    rgba(61, 220, 132, 0.12),
+    transparent 45%
+  );
+  --gradient-soft: linear-gradient(135deg, #0f2a1f 0%, #143528 100%);
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 10px 28px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow-focus: 0 0 0 3px rgba(61, 220, 132, 0.15);
+
+  --scrollbar-thumb: rgba(232, 236, 239, 0.12);
+  --scrollbar-thumb-hover: rgba(232, 236, 239, 0.22);
+
+  --react-flow-bg: #0a0b0f;
+  --react-flow-node-bg: #0f1218;
+  --react-flow-controls-bg: #0f1218;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-text);
+    letter-spacing: -0.015em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--brand-light);
+    color: var(--brand-deep);
+  }
+
+  .dark ::selection {
+    background: var(--brand-default);
+    color: #e8ecef;
+  }
+}
+
+/* ==========================================================================
+   Utilities / primitives
+   ========================================================================== */
+@layer components {
+  /* Deep-green brand surface used by the dashboard hero and major CTAs. */
+  .convia-hero-surface {
+    background-image: var(--gradient-hero);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .convia-hero-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--gradient-hero-highlight);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .convia-hero-surface > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .convia-hairline {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.22),
+      transparent
+    );
+  }
+
+  /* Frosted control surface that sits on top of the brand gradient. */
+  .convia-on-brand-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(10px);
+    transition: background 180ms ease-out, border-color 180ms ease-out;
+  }
+
+  .convia-on-brand-control:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.26);
+  }
+
+  .convia-scroll-x {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .convia-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* ==========================================================================
+   Scrollbars
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ==========================================================================
+   Third-party theming (React Flow)
+   ========================================================================== */
+.react-flow {
+  --xy-background-color: var(--react-flow-bg);
+  --xy-node-background-color: var(--react-flow-node-bg);
+  --xy-edge-stroke: var(--color-text-muted);
+  --xy-edge-stroke-width: 1.5;
+  --xy-attribution-background-color: transparent;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__controls {
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--react-flow-controls-bg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--react-flow-controls-bg);
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--brand-pale);
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
