@@ -61,12 +61,12 @@ export const VoiceOrb: React.FC<VoiceOrbProps> = ({ state, onClick, className })
   return (
     <div
       className={cn(
-        "fixed bottom-[136px] right-4 z-40 flex items-center gap-2.5 lg:bottom-6 lg:right-6",
+        "fixed bottom-[136px] right-4 z-40 hidden items-center gap-2.5 sm:flex lg:bottom-6 lg:right-6",
         className
       )}
     >
       {state !== "IDLE" ? (
-        <span className="rounded-full border border-line bg-surface/95 px-3 py-1 text-[12px] font-medium text-ink-secondary shadow-card backdrop-blur-md animate-fade-in">
+        <span className="rounded-full border border-line bg-surface px-3 py-1 text-[12px] font-medium text-ink-secondary shadow-card animate-fade-in">
           {visuals.label}
         </span>
       ) : null}

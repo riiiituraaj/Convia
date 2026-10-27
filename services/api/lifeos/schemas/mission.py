@@ -1,14 +1,14 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
 from lifeos.schemas.commitment import CommitmentResponse
 
 
 class MissionNodeBase(BaseModel):
-    title: str
-    node_type: str = "OBJECTIVE" # OBJECTIVE, TASK, MILESTONE, EXTERNAL
-    status: str = "PENDING"
-    progress: float = 0.0
+    title: str = Field(min_length=1, max_length=255)
+    node_type: Literal["OBJECTIVE", "TASK", "MILESTONE", "EXTERNAL"] = "OBJECTIVE"
+    status: Literal["PENDING", "IN_PROGRESS", "COMPLETED", "BLOCKED"] = "PENDING"
+    progress: float = Field(default=0.0, ge=0, le=100)
     position_x: float = 0.0
     position_y: float = 0.0
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
@@ -23,9 +23,17 @@ class MissionNodeResponse(MissionNodeBase):
 
 
 class MissionEdgeBase(BaseModel):
-    source_node_id: str
-    target_node_id: str
-    relationship_type: str = "BLOCKS"
+    source_node_id: str = Field(min_length=1, max_length=64)
+    target_node_id: str = Field(min_length=1, max_length=64)
+    relationship_type: Literal["BLOCKS", "FEEDS_INTO", "RELIES_ON"] = "BLOCKS"
+
+
+class MissionNodeCreate(MissionNodeBase):
+    client_id: str = Field(min_length=1, max_length=64)
+
+
+class MissionEdgeCreate(MissionEdgeBase):
+    pass
 
 
 class MissionEdgeResponse(MissionEdgeBase):
@@ -37,19 +45,19 @@ class MissionEdgeResponse(MissionEdgeBase):
 
 
 class MissionBase(BaseModel):
-    title: str
-    description: Optional[str] = None
-    desired_outcome: Optional[str] = None
-    priority: str = "HIGH"
+    title: str = Field(min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=10000)
+    desired_outcome: Optional[str] = Field(default=None, max_length=10000)
+    priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] = "HIGH"
     target_date: Optional[datetime] = None
-    budget_limit: Optional[float] = None
-    budget_currency: str = "INR"
+    budget_limit: Optional[float] = Field(default=None, ge=0)
+    budget_currency: str = Field(default="INR", min_length=3, max_length=10)
     constraints: Dict[str, Any] = Field(default_factory=dict)
 
 
 class MissionCreate(MissionBase):
-    nodes: Optional[List[MissionNodeBase]] = None
-    edges: Optional[List[MissionEdgeBase]] = None
+    nodes: Optional[List[MissionNodeCreate]] = None
+    edges: Optional[List[MissionEdgeCreate]] = None
 
 
 class MissionUpdate(BaseModel):

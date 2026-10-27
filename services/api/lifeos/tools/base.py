@@ -1,12 +1,12 @@
 from typing import Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ToolResult(BaseModel):
     success: bool
     data: Dict[str, Any]
     error: str = ""
-    evidence: list[str] = []
+    evidence: list[str] = Field(default_factory=list)
 
 
 class BaseTool:

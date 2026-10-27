@@ -59,7 +59,7 @@ export default function RegisterPage() {
             <Logo height={32} />
           </Link>
           <p className="mt-2 text-sm text-ink-secondary">
-            Create your account to start tracking commitments.
+            Create an account to save and review commitments.
           </p>
         </div>
 
@@ -163,13 +163,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-ink-muted">
-          Or{" "}
-          <Link href="/life" className="text-brand hover:text-brand-deep">
-            continue as guest
-          </Link>{" "}
-          — no account required.
-        </p>
       </div>
     </div>
   );

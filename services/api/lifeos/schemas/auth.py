@@ -1,20 +1,20 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 
 
 class UserBase(BaseModel):
     email: EmailStr
-    full_name: str = "CONVIA User"
+    full_name: str = Field(default="CONVIA User", min_length=2, max_length=255)
 
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(min_length=8, max_length=72)
 
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=72)
 
 
 class Token(BaseModel):

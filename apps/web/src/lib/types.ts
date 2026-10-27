@@ -9,6 +9,105 @@ export interface User {
   created_at: string;
 }
 
+export interface ConversationMessage {
+  id: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  source: string;
+  status: string;
+  metadata_json: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  summary_text?: string | null;
+  context_pack_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  last_message_preview?: string | null;
+}
+
+export interface ConversationDetail {
+  id: string;
+  title: string;
+  summary_text?: string | null;
+  context_pack_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  messages: ConversationMessage[];
+}
+
+export interface ContextDiagnostics {
+  conversation_id: string;
+  total_items: number;
+  categories_present: string[];
+  items: Array<{
+    category: string;
+    provenance: string;
+    source_id: string;
+    snippet: string;
+    confidence?: number | null;
+    locator?: string | null;
+  }>;
+  active_constraints: Record<string, any>;
+  history_message_count: number;
+  truncated: boolean;
+  summary_applied: boolean;
+}
+
+export interface ConversationTurnResult {
+  user_message: ConversationMessage;
+  assistant_message: ConversationMessage;
+  active_constraints: Record<string, any>;
+  diagnostics?: ContextDiagnostics | null;
+}
+
+export interface DocumentItem {
+  id: string;
+  filename: string;
+  media_type: string;
+  extension: string;
+  size_bytes: number;
+  sha256: string;
+  source_count: number | null;
+  status: string;
+  summary_text: string | null;
+  summary_model: string | null;
+  summary_updated_at: string | null;
+  created_at: string;
+  updated_at: string;
+  chunk_count: number;
+}
+
+export interface DocumentSource {
+  reference: string;
+  locator: string;
+  excerpt: string;
+}
+
+export interface DocumentAnswer {
+  answer: string | null;
+  status: string;
+  provider: string;
+  message: string;
+  sources: DocumentSource[];
+  artifact_id?: string | null;
+}
+
+export interface IntentCaptureResult {
+  conversation_id: string;
+  recognized_intent: string;
+  extracted_mission?: Mission | null;
+  commitments: Commitment[];
+  signals_detected: string[];
+  summary_message: string;
+  confidence?: number | null;
+  model_used: string;
+}
+
 export type CommitmentStatus =
   | "DETECTED"
   | "PENDING_CONFIRMATION"
@@ -35,16 +134,16 @@ export interface Commitment {
   id: string;
   user_id: string;
   mission_id?: string | null;
-  actor: string;
-  recipient?: string | null;
   action: string;
+  recipient?: string | null;
+  actor: string;
   context?: string | null;
   deadline?: string | null;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  status: CommitmentStatus;
-  confidence: number;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   risk_score: number;
   risk_level: RiskSeverity;
+  status: CommitmentStatus;
+  confidence?: number | null;
   dependencies: string[];
   consequences?: string | null;
   evidence?: string | null;
@@ -52,30 +151,25 @@ export interface Commitment {
   autonomy_level: number;
   created_at: string;
   updated_at: string;
-  completed_at?: string | null;
   events?: CommitmentEvent[];
 }
 
 export interface MissionNode {
   id: string;
-  mission_id: string;
   title: string;
-  node_type: "OBJECTIVE" | "TASK" | "MILESTONE" | "EXTERNAL";
+  node_type: "OBJECTIVE" | "TASK" | "MILESTONE" | "CHECKPOINT";
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "BLOCKED";
   progress: number;
   position_x: number;
   position_y: number;
   metadata_json: Record<string, any>;
-  created_at: string;
 }
 
 export interface MissionEdge {
   id: string;
-  mission_id: string;
   source_node_id: string;
   target_node_id: string;
-  relationship_type: "BLOCKS" | "FEEDS_INTO" | "RELIES_ON";
-  created_at: string;
+  relationship_type: "BLOCKS" | "ENABLES" | "PARALLEL";
 }
 
 export interface Mission {
@@ -149,19 +243,125 @@ export interface ActionPassport {
   verified_at?: string | null;
 }
 
+export interface AgentStep {
+  id: string;
+  run_id: string;
+  step_index: number;
+  title: string;
+  tool_name: string;
+  input_payload: Record<string, any>;
+  output_payload: Record<string, any>;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "AWAITING_APPROVAL" | "FAILED" | "SKIPPED" | "CANCELLED";
+  error_message?: string | null;
+  requires_approval: boolean;
+  action_passport_id?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+}
+
 export interface AgentRun {
   id: string;
   user_id: string;
   agent_type: string;
   task_description: string;
-  status: "RUNNING" | "COMPLETED" | "FAILED" | "WAITING_APPROVAL";
+  status: "QUEUED" | "PLANNING" | "RUNNING" | "AWAITING_APPROVAL" | "PAUSED" | "COMPLETED" | "PARTIALLY_COMPLETED" | "BLOCKED" | "FAILED" | "CANCELLED";
   model_used: string;
   latency_ms: number;
   input_payload: Record<string, any>;
   output_payload: Record<string, any>;
   events: Array<Record<string, any>>;
+  plan_json?: Array<Record<string, any>>;
+  steps?: AgentStep[];
   created_at: string;
   completed_at?: string | null;
+}
+
+export interface ResearchSourceItem {
+  id: string;
+  url: string;
+  title: string;
+  source: string;
+  domain?: string | null;
+  snippet: string;
+  relevance?: number | null;
+  retrieval_status: string;
+  published_at?: string | null;
+  retrieved_at: string;
+}
+
+export interface ResearchSessionItem {
+  id: string;
+  title: string;
+  original_query: string;
+  status: string;
+  summary?: string | null;
+  synthesis?: string | null;
+  claims_json?: Array<{
+    claim: string;
+    source_ids: string[];
+    verified: boolean;
+    citation_valid?: boolean;
+    invalid_citations_detected?: string[];
+  }>;
+  sources_count?: number;
+  sources?: ResearchSourceItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArtifactItem {
+  id: string;
+  user_id: string;
+  mission_id?: string | null;
+  agent_run_id?: string | null;
+  conversation_id?: string | null;
+  title: string;
+  artifact_type: string;
+  content: string;
+  summary?: string | null;
+  sources_json: Array<Record<string, any>>;
+  metadata_json: Record<string, any>;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArtifactSummaryItem {
+  id: string;
+  title: string;
+  artifact_type: string;
+  summary?: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfficialSearchLink {
+  provider_name: string;
+  label: string;
+  url: string;
+  notes: string;
+}
+
+export interface TravelSearchResult {
+  search_type: "FLIGHTS" | "HOTELS";
+  provider: string;
+  configured: boolean;
+  live_inventory_available: boolean;
+  offers: Array<Record<string, unknown>>;
+  message: string;
+  official_search_links: OfficialSearchLink[];
+}
+
+export interface TravelProviderStatus {
+  live_booking_enabled: boolean;
+  policy: string;
+  providers: Record<string, {
+    name: string;
+    configured: boolean;
+    status: string;
+    direct_booking_enabled: boolean;
+  }>;
 }
 
 export interface MemoryItem {
@@ -179,7 +379,7 @@ export interface MemoryItem {
 export interface IntegrationItem {
   id: string;
   provider: string;
-  status: "CONNECTED" | "NOT_CONNECTED" | "COMING_SOON" | "DEMO_FALLBACK";
+  status: "CONFIGURED" | "NOT_CONFIGURED" | "CONNECTED" | "NOT_CONNECTED" | "COMING_SOON" | "DEMO_FALLBACK";
   credentials_present: boolean;
   last_synced_at?: string | null;
   metadata_json: Record<string, any>;
@@ -249,3 +449,49 @@ export interface WaitingData {
   }>;
 }
 
+export interface ContextPackItem {
+  id: string;
+  title: string;
+  objective: string;
+  status: "ACTIVE" | "PAUSED" | "COMPLETED" | "ARCHIVED";
+  facts_json: Array<Record<string, unknown>>;
+  constraints_json: string[];
+  questions_json: string[];
+  links_json: Array<Record<string, unknown>>;
+  resource_refs_json: Record<string, string[]>;
+  tags_json: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeEntryItem {
+  id: string;
+  title: string;
+  content: string;
+  entry_type: "NOTE" | "FINDING" | "DECISION" | "DEFINITION" | "LINK";
+  collection: string;
+  tags_json: string[];
+  provenance_json: Array<Record<string, unknown>>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlaybookItem {
+  id: string;
+  name: string;
+  description: string;
+  inputs_json: Array<{ name?: string; description?: string; required?: boolean }>;
+  steps_json: Array<{ title: string; action: string }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudioResult {
+  artifact_id: string;
+  title: string;
+  artifact_type: string;
+  content: string;
+  generated_by: string;
+  sources: Array<Record<string, unknown>>;
+  status: string;
+}

@@ -23,9 +23,9 @@ const ToastContext = createContext<ToastContextValue>({ toast: () => undefined }
 export const useToast = (): ToastContextValue => useContext(ToastContext);
 
 const TONE_STYLES: Record<ToastTone, { icon: React.ElementType; accent: string; text: string }> = {
-  success: { icon: CheckCircle2, accent: "bg-brand-accent", text: "text-brand-mid" },
+  success: { icon: CheckCircle2, accent: "bg-success", text: "text-success" },
   danger: { icon: XCircle, accent: "bg-danger", text: "text-danger" },
-  warning: { icon: AlertTriangle, accent: "bg-warning", text: "text-[#B87A0E]" },
+  warning: { icon: AlertTriangle, accent: "bg-warning", text: "text-warning" },
   info: { icon: Info, accent: "bg-info", text: "text-info" },
 };
 

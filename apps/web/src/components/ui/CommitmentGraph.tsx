@@ -27,11 +27,11 @@ const RX = 272;
 const RY = 142;
 
 const TONE_LABELS: Partial<Record<Tone, string>> = {
-  success: "On track",
+  success: "No saved risk",
   brand: "Current commitment",
   info: "Dependency",
-  danger: "Blocking issue",
-  warning: "Needs watching",
+  danger: "Saved risk label",
+  warning: "Review needed",
   neutral: "Related",
 };
 
@@ -98,19 +98,19 @@ export const CommitmentGraph: React.FC<CommitmentGraphProps> = ({
             style={{ left: `${(CX / WIDTH) * 100}%`, top: `${(CY / HEIGHT) * 100}%` }}
           >
             <div className="convia-hero-surface rounded-xl px-4 py-4 text-center shadow-card-hover">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white">
                 Current commitment
               </p>
               <p className="mt-1.5 text-[14px] font-semibold leading-snug text-white">
                 {center.title}
               </p>
               {center.subtitle ? (
-                <p className="mt-1 text-[11.5px] leading-relaxed text-white/70">
+                <p className="mt-1 text-[12px] leading-relaxed text-white">
                   {center.subtitle}
                 </p>
               ) : null}
               {center.meta ? (
-                <p className="mt-2.5 inline-flex rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10.5px] font-medium text-white/85">
+                <p className="mt-2.5 inline-flex rounded-full border border-white/25 bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white">
                   {center.meta}
                 </p>
               ) : null}

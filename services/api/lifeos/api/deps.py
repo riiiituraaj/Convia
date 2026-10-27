@@ -14,28 +14,29 @@ async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """Returns current user from token, or auto-provisions a default continuity user if none provided."""
-    if token:
-        user_id = decode_access_token(token)
-        if user_id:
-            result = await db.execute(select(User).where(User.id == user_id))
-            user = result.scalars().first()
-            if user:
-                return user
+    """Resolve only an authenticated, active account; never share a guest identity."""
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Default / demo user auto-provisioning for seamless exploration
-    default_email = "alex@convia.app"
-    result = await db.execute(select(User).where(User.email == default_email))
+    user_id = decode_access_token(token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    result = await db.execute(select(User).where(User.id == user_id, User.is_active.is_(True)))
     user = result.scalars().first()
     if not user:
-        user = User(
-            email=default_email,
-            hashed_password="demo_hashed_secret",
-            full_name="Alex Mercer",
-            autonomy_level=3
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
     return user
 

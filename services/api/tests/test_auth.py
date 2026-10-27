@@ -30,7 +30,7 @@ async def test_register_login_me(client: AsyncClient):
     # Duplicate register rejected
     dup = await client.post(
         "/api/auth/register",
-        json={"email": email, "password": "x", "full_name": "Dup"},
+        json={"email": email, "password": "s3curePass!", "full_name": "Dup"},
     )
     assert dup.status_code == 400
 
@@ -89,17 +89,22 @@ async def test_patch_settings(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_people_and_waiting(client: AsyncClient):
+    registered = await client.post(
+        "/api/auth/register",
+        json={"email": f"people-{uuid.uuid4().hex[:12]}@convia.app", "password": "peoplePass1", "full_name": "People User"},
+    )
+    headers = {"Authorization": f"Bearer {registered.json()['access_token']}"}
     # Seed commitments first
-    seed = await client.post("/api/demo/seed")
+    seed = await client.post("/api/demo/seed", headers=headers)
     assert seed.status_code == 200
 
-    people = await client.get("/api/people")
+    people = await client.get("/api/people", headers=headers)
     assert people.status_code == 200
     people_list = people.json()
     assert isinstance(people_list, list)
     assert len(people_list) >= 1
 
-    waiting = await client.get("/api/people/waiting")
+    waiting = await client.get("/api/people/waiting", headers=headers)
     assert waiting.status_code == 200
     w = waiting.json()
     assert "they_wait_on_you" in w
@@ -108,28 +113,107 @@ async def test_people_and_waiting(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_research_endpoint(client: AsyncClient):
+async def test_research_endpoint_is_honest_without_credentials(client: AsyncClient, monkeypatch):
+    from lifeos.core.config import settings
+    registered = await client.post(
+        "/api/auth/register",
+        json={"email": f"research-{uuid.uuid4().hex[:12]}@convia.app", "password": "researchPass1", "full_name": "Research User"},
+    )
+    headers = {"Authorization": f"Bearer {registered.json()['access_token']}"}
+    monkeypatch.setattr(settings, "TAVILY_API_KEY", None)
     res = await client.post(
         "/api/research",
         json={"query": "Bangalore coliving rent", "search_depth": "basic"},
+        headers=headers,
     )
     assert res.status_code == 200
     body = res.json()
     assert body["query"] == "Bangalore coliving rent"
-    assert len(body["results"]) > 0
-    assert body["success"] is True
-    assert body["provider"] in ("tavily", "local_fallback")
-    if body["provider"] == "local_fallback":
-        # Offline mode must say so — never pretend to be live web results.
-        assert body["error"]
-        assert all(not (r.get("url") or "").startswith("http") for r in body["results"])
+    assert body["results"] == []
+    assert body["success"] is False
+    assert body["provider"] == "unavailable"
+    assert "not configured" in body["error"].lower()
 
 
 @pytest.mark.asyncio
-async def test_guest_me_without_token(client: AsyncClient):
+async def test_protected_routes_require_a_valid_token(client: AsyncClient):
     me = await client.get("/api/auth/me")
-    assert me.status_code == 200
-    assert me.json()["email"] == "alex@convia.app"
+    assert me.status_code == 401
+    missions = await client.get("/api/missions")
+    assert missions.status_code == 401
+    stream = await client.get("/api/activity/stream")
+    assert stream.status_code == 401
+    invalid = await client.get("/api/auth/me", headers={"Authorization": "Bearer invalid"})
+    assert invalid.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_user_owned_records_are_isolated(client: AsyncClient):
+    first = await client.post(
+        "/api/auth/register",
+        json={"email": f"owner-{uuid.uuid4().hex[:12]}@convia.app", "password": "ownerPass1", "full_name": "Owner"},
+    )
+    second = await client.post(
+        "/api/auth/register",
+        json={"email": f"other-{uuid.uuid4().hex[:12]}@convia.app", "password": "otherPass1", "full_name": "Other"},
+    )
+    owner_headers = {"Authorization": f"Bearer {first.json()['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {second.json()['access_token']}"}
+    mission = await client.post("/api/missions", json={"title": "Private mission"}, headers=owner_headers)
+    assert mission.status_code == 200
+    mission_id = mission.json()["id"]
+
+    other_missions = await client.get("/api/missions", headers=other_headers)
+    assert other_missions.status_code == 200
+    assert other_missions.json() == []
+    hidden = await client.get(f"/api/missions/{mission_id}", headers=other_headers)
+    assert hidden.status_code == 404
+
+    foreign_memory = await client.post(
+        "/api/memory",
+        json={"content": "foreign link", "mission_id": mission_id},
+        headers=other_headers,
+    )
+    assert foreign_memory.status_code == 404
+    foreign_commitment = await client.post(
+        "/api/commitments",
+        json={"action": "foreign link", "mission_id": mission_id},
+        headers=other_headers,
+    )
+    assert foreign_commitment.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_mission_graph_rejects_cross_mission_edges_and_cycles(client: AsyncClient):
+    registered = await client.post(
+        "/api/auth/register",
+        json={"email": f"graph-{uuid.uuid4().hex[:12]}@convia.app", "password": "graphPass1", "full_name": "Graph User"},
+    )
+    headers = {"Authorization": f"Bearer {registered.json()['access_token']}"}
+    bad_reference = await client.post(
+        "/api/missions",
+        headers=headers,
+        json={
+            "title": "Broken graph",
+            "nodes": [{"client_id": "a", "title": "Task A"}],
+            "edges": [{"source_node_id": "a", "target_node_id": "foreign"}],
+        },
+    )
+    assert bad_reference.status_code == 422
+
+    cycle = await client.post(
+        "/api/missions",
+        headers=headers,
+        json={
+            "title": "Cyclic graph",
+            "nodes": [{"client_id": "a", "title": "Task A"}, {"client_id": "b", "title": "Task B"}],
+            "edges": [
+                {"source_node_id": "a", "target_node_id": "b"},
+                {"source_node_id": "b", "target_node_id": "a"},
+            ],
+        },
+    )
+    assert cycle.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -155,8 +239,8 @@ async def test_intent_parse_records_agent_run(client: AsyncClient):
     assert empty.json() == []
 
     raw = (
-        "Move to Bangalore by month end under 80k with housing and travel, "
-        "and deliver the API tonight to the team."
+        "I promised the engineering team I would deliver the API by tonight; "
+        "I also plan to move to Bangalore by month end under 80k with housing and travel."
     )
     parse = await client.post(
         "/api/intents/parse",
@@ -167,7 +251,8 @@ async def test_intent_parse_records_agent_run(client: AsyncClient):
     body = parse.json()
     assert body["recognized_intent"] == "MISSION_AND_COMMITMENT_EXTRACTION"
     assert isinstance(body["commitments"], list)
-    assert len(body["commitments"]) >= 1
+    assert len(body["commitments"]) == 1
+    assert body["commitments"][0]["suggested_for_confirmation"] is True
     assert body["extracted_mission"] is not None
     assert body["extracted_mission"]["title"]
 
@@ -176,8 +261,9 @@ async def test_intent_parse_records_agent_run(client: AsyncClient):
     assert after_commitments.status_code == 200
     saved = after_commitments.json()
     assert len(saved) >= 1
-    assert any("Bangalore" in (body["extracted_mission"]["title"] or "") for _ in [0]) or saved
+    assert "Bangalore" in body["extracted_mission"]["title"]
     assert saved[0]["action"]
+    assert saved[0]["status"] == "PENDING_CONFIRMATION"
 
     # Mission graph available for the extracted mission
     missions = await client.get("/api/missions", headers=headers)
@@ -193,11 +279,67 @@ async def test_intent_parse_records_agent_run(client: AsyncClient):
     top = runs[0]
     assert top["agent_type"] == "ORCHESTRATOR"
     assert top["status"] == "COMPLETED"
-    assert top["task_description"].startswith("Parse intent:")
-    assert raw[:40] in top["task_description"] or raw[:40] in top["task_description"].lower()
+    assert top["task_description"].startswith("Parse intent (")
+    assert raw not in top["task_description"]
     assert isinstance(top["events"], list)
     assert len(top["events"]) >= 1
     assert top["latency_ms"] is not None
+
+
+@pytest.mark.asyncio
+async def test_conversation_messages_persist_and_are_user_scoped(client: AsyncClient):
+    first = await client.post(
+        "/api/auth/register",
+        json={
+            "email": f"conversation-{uuid.uuid4().hex[:12]}@convia.app",
+            "password": "conversationPass1",
+            "full_name": "Conversation Owner",
+        },
+    )
+    assert first.status_code == 200
+    owner_headers = {"Authorization": f"Bearer {first.json()['access_token']}"}
+
+    captured = await client.post(
+        "/api/intents/parse",
+        json={"raw_text": "I promised to send the budget summary by Friday."},
+        headers=owner_headers,
+    )
+    assert captured.status_code == 200
+    conversation_id = captured.json()["conversation_id"]
+
+    detail = await client.get(f"/api/conversations/{conversation_id}", headers=owner_headers)
+    assert detail.status_code == 200
+    assert [message["role"] for message in detail.json()["messages"]] == ["USER", "ASSISTANT"]
+    assert "budget summary" in detail.json()["messages"][0]["content"]
+    assert detail.json()["messages"][1]["metadata_json"]["model_used"] == "local-deterministic"
+
+    listed = await client.get("/api/conversations", headers=owner_headers)
+    assert listed.status_code == 200
+    assert listed.json()[0]["message_count"] == 2
+
+    second = await client.post(
+        "/api/auth/register",
+        json={
+            "email": f"conversation-other-{uuid.uuid4().hex[:12]}@convia.app",
+            "password": "conversationPass1",
+            "full_name": "Other User",
+        },
+    )
+    assert second.status_code == 200
+    other_headers = {"Authorization": f"Bearer {second.json()['access_token']}"}
+    hidden = await client.get(f"/api/conversations/{conversation_id}", headers=other_headers)
+    assert hidden.status_code == 404
+
+    rejected = await client.post(
+        "/api/intents/parse",
+        json={"raw_text": "I will keep working on this", "conversation_id": conversation_id},
+        headers=other_headers,
+    )
+    assert rejected.status_code == 404
+
+    deleted = await client.delete(f"/api/conversations/{conversation_id}", headers=owner_headers)
+    assert deleted.status_code == 204
+    assert (await client.get(f"/api/conversations/{conversation_id}", headers=owner_headers)).status_code == 404
 
 
 @pytest.mark.asyncio
@@ -237,8 +379,7 @@ async def test_calendar_and_email_tools_fail_honestly(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_generic_intent_is_never_a_noop(client: AsyncClient):
-    """Everyday non-flagship intents must still persist at least one commitment."""
+async def test_generic_intent_captures_only_explicit_obligations(client: AsyncClient):
     email = f"generic-{uuid.uuid4().hex[:12]}@convia.app"
     reg = await client.post(
         "/api/auth/register",
@@ -262,12 +403,12 @@ async def test_generic_intent_is_never_a_noop(client: AsyncClient):
 
     saved = (await client.get("/api/commitments", headers=headers)).json()
     assert len(saved) >= 1
+    assert saved[0]["status"] == "PENDING_CONFIRMATION"
     assert any("Priya" in (c.get("action") or "") or "design" in (c.get("action") or "").lower() for c in saved)
 
 
 @pytest.mark.asyncio
-async def test_flagship_intent_persists_risks_and_passports(client: AsyncClient):
-    """Travel/budget intent should write real Risk + ActionPassport rows."""
+async def test_intent_does_not_invent_live_fares_or_external_approvals(client: AsyncClient):
     email = f"flag-{uuid.uuid4().hex[:12]}@convia.app"
     reg = await client.post(
         "/api/auth/register",
@@ -276,10 +417,7 @@ async def test_flagship_intent_persists_risks_and_passports(client: AsyncClient)
     assert reg.status_code == 200
     headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
 
-    raw = (
-        "Move to Bangalore for my internship with housing and a flight, "
-        "keep me under 80000, and deliver the API tonight."
-    )
+    raw = "I promised my team I would deliver the API by tonight. I plan to move to Bangalore for my internship with housing and a flight."
     parse = await client.post(
         "/api/intents/parse",
         json={"raw_text": raw},
@@ -287,29 +425,15 @@ async def test_flagship_intent_persists_risks_and_passports(client: AsyncClient)
     )
     assert parse.status_code == 200
     body = parse.json()
-    assert "risk" in body["summary_message"].lower() or "passport" in body["summary_message"].lower()
+    assert "captured" in body["summary_message"].lower()
 
     risks = (await client.get("/api/risks", headers=headers)).json()
-    assert len(risks) >= 1
-    assert any(not r["is_resolved"] for r in risks)
+    assert len(risks) == 1
+    assert "deadline" in risks[0]["title"].lower()
+    assert "flight fare" not in risks[0]["title"].lower()
 
     actions = (await client.get("/api/actions", headers=headers)).json()
-    assert len(actions) >= 1
-    pending = next(a for a in actions if a["status"] == "PENDING_APPROVAL")
-
-    # Approving the passport must resolve related open risks (no orphan recovery).
-    approve = await client.post(
-        f"/api/actions/{pending['id']}/decision",
-        json={"decision": "APPROVE"},
-        headers=headers,
-    )
-    assert approve.status_code == 200
-    assert approve.json()["status"] == "VERIFIED"
-
-    risks_after = (await client.get("/api/risks", headers=headers)).json()
-    linked = [r for r in risks_after if r.get("commitment_id") == pending.get("commitment_id")]
-    if pending.get("commitment_id") and linked:
-        assert all(r["is_resolved"] for r in linked)
+    assert actions == []
 
     memories = (await client.get("/api/memory", headers=headers)).json()
     assert any(m["category"] == "MISSION" for m in memories)

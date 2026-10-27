@@ -17,7 +17,7 @@ export default function PeoplePage() {
     queryFn: () => api.getPeople(),
   });
 
-  const peopleWithWaiting = people.filter(
+  const peopleWithOpenRecords = people.filter(
     (p) => p.waiting_on_user.length > 0 || p.user_waiting_on.length > 0
   );
   const peopleClear = people.filter(
@@ -27,14 +27,14 @@ export default function PeoplePage() {
   return (
     <div className="space-y-7 animate-fade-in">
       <PageHeader
-        eyebrow="Human connections"
+        eyebrow="Saved recipients"
         title="People"
-        description="CONVIA tracks who you owe, who owes you, and what&apos;s at stake in every relationship."
+        description="Review recipients and stakeholders saved on your commitments."
         icon={<Users className="h-5 w-5" strokeWidth={1.75} />}
         meta={
           <>
             <Badge tone="brand" dot>{people.length} people</Badge>
-            <Badge tone="warning" dot>{peopleWithWaiting.length} need attention</Badge>
+            <Badge tone="warning" dot>{peopleWithOpenRecords.length} with open records</Badge>
           </>
         }
       />
@@ -44,21 +44,21 @@ export default function PeoplePage() {
       ) : people.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No relationships tracked yet"
-          description="Commitments with recipients will automatically appear here."
+          title="No recipients saved yet"
+          description="Recipients you add to commitments will appear here. CONVIA does not infer relationship status."
         />
       ) : (
         <>
-          {peopleWithWaiting.length > 0 && (
+          {peopleWithOpenRecords.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-[15px] font-semibold text-ink">Needs attention</h2>
+                <h2 className="text-[15px] font-semibold text-ink">With open records</h2>
                 <Badge tone="warning" dot>
-                  {peopleWithWaiting.length}
+                  {peopleWithOpenRecords.length}
                 </Badge>
               </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {peopleWithWaiting.map((person) => (
+                {peopleWithOpenRecords.map((person) => (
                   <PersonCard key={person.name} person={person} />
                 ))}
               </div>
@@ -68,7 +68,7 @@ export default function PeoplePage() {
           {peopleClear.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-[15px] font-semibold text-ink">Clear</h2>
+                <h2 className="text-[15px] font-semibold text-ink">No open records</h2>
                 <Badge tone="success" dot>
                   {peopleClear.length}
                 </Badge>
@@ -84,9 +84,8 @@ export default function PeoplePage() {
           <Card>
             <CardBody>
               <p className="text-[12.5px] leading-relaxed text-ink-secondary">
-                People are inferred from your commitments. When you tell CONVIA &quot;I promised Rahul the design
-                tonight&quot; or &quot;Priya owes me the dataset&quot;, CONVIA builds a relationship graph so you always know
-                who is waiting on you and who you&apos;re waiting on.
+                People appear here when a recipient is saved on a commitment. Intent capture does not yet extract
+                names from free text, so add the recipient in the commitment form to include them in this view.
               </p>
             </CardBody>
           </Card>

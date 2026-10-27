@@ -12,7 +12,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 /**
  * The single card primitive used across CONVIA.
- * White surface, hairline border, very soft elevation.
+ * Solid surface, hairline border, and restrained elevation.
  */
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(function Card(
   { className, interactive = false, padded = false, children, ...rest },
@@ -66,9 +66,9 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
         </span>
       ) : null}
       <div className="min-w-0">
-        <h3 className="truncate text-[15px] font-semibold tracking-tight text-ink">{title}</h3>
+        <h3 className="truncate text-[16px] font-semibold tracking-tight text-ink">{title}</h3>
         {subtitle ? (
-          <p className="mt-0.5 text-[13px] leading-relaxed text-ink-secondary">{subtitle}</p>
+          <p className="mt-0.5 text-[13.5px] leading-relaxed text-ink-secondary">{subtitle}</p>
         ) : null}
       </div>
     </div>

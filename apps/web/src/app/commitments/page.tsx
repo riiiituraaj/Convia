@@ -123,7 +123,7 @@ function CommitmentsContent() {
       queryClient.invalidateQueries({ queryKey: ["blindSpots"] });
       toast({
         title: "Commitment captured",
-        description: "CONVIA is now watching this obligation.",
+        description: "This commitment was saved to your workspace.",
       });
       setShowCreateModal(false);
       setAction("");
@@ -217,7 +217,7 @@ function CommitmentsContent() {
       <PageHeader
         eyebrow="The central primitive"
         title="Commitment center"
-        description="A commitment is an obligation in context, with actors, recipients, deadlines, dependencies and consequences. CONVIA watches every one of them."
+        description="Save an obligation with the context you provide, then review its status, recipients, deadline and any explicitly recorded dependencies."
         icon={<CircleCheckBig className="h-5 w-5" strokeWidth={1.75} />}
         actions={
           <Button onClick={() => setShowCreateModal(true)}>
@@ -238,7 +238,7 @@ function CommitmentsContent() {
                   setSelectedPassport(activePassport);
                   setIsPassportOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#F7E2B8] bg-warning-light px-2.5 py-1 text-[12px] font-medium text-[#B87A0E] transition-colors hover:bg-[#FDEBCB]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#F7E2B8] bg-warning-light px-2.5 py-1 text-[12px] font-medium text-warning transition-colors hover:bg-[#FDEBCB]"
               >
                 <ShieldAlert className="h-3.5 w-3.5" strokeWidth={2} />
                 Action passport awaiting approval
@@ -295,7 +295,7 @@ function CommitmentsContent() {
           title={commitments.length === 0 ? "No commitments yet" : "Nothing matches this filter"}
           description={
             commitments.length === 0
-              ? "Type or speak what you owe someone and CONVIA will track it end to end."
+              ? "Type or speak an obligation to save it with your account. You can review and update its status here."
               : "Try a different filter, or load the flagship demo to explore CONVIA with real data."
           }
           action={
@@ -332,7 +332,7 @@ function CommitmentsContent() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="New commitment"
-        subtitle="Capture an obligation so CONVIA can protect it"
+        subtitle="Save an obligation and review its status or deadline later"
         eyebrow="Explicit commitment"
         icon={<CircleCheckBig className="h-4 w-4" strokeWidth={1.8} />}
         footer={

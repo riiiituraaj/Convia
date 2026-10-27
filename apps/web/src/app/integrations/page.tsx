@@ -25,25 +25,27 @@ export default function IntegrationsPage() {
   });
 
   const statusTone = (status: string) => {
-    if (status === "CONNECTED") return "success" as const;
-    if (status === "DEMO_FALLBACK") return "warning" as const;
+    if (status === "CONFIGURED" || status === "CONNECTED") return "info" as const;
+    if (status === "NOT_CONFIGURED" || status === "DEMO_FALLBACK") return "warning" as const;
     if (status === "COMING_SOON") return "info" as const;
     return "neutral" as const;
   };
 
   const statusHint = (item: (typeof integrations)[number]) => {
-    if (item.status === "CONNECTED") return "Credentials detected";
+    if (item.status === "CONFIGURED") return "Credentials and model configured; network connectivity not checked";
+    if (item.status === "CONNECTED") return "Connected";
     if (item.status === "COMING_SOON") return "Coming Soon — not wired live";
-    if (item.status === "DEMO_FALLBACK") return "No credentials — deterministic local fallback";
+    if (item.status === "DEMO_FALLBACK") return "Local mode; no live provider configured";
+    if (item.status === "NOT_CONNECTED" && item.credentials_present) return "Credentials present; live access not verified";
     return "Not connected — awaiting setup";
   };
 
   return (
     <div className="space-y-7 animate-fade-in">
       <PageHeader
-        eyebrow="Connected context"
+        eyebrow="Provider configuration"
         title="Integrations"
-        description="See which sources CONVIA can use. Nothing is presented as connected unless credentials are present."
+        description="See which provider credentials are configured. A configured key does not mean that live connectivity has been verified."
         icon={<PlugZap className="h-5 w-5" />}
       />
       {isLoading ? (
@@ -58,7 +60,7 @@ export default function IntegrationsPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {integrations.map((item) => {
             const Icon = icons[item.id] || PlugZap;
-            const connected = item.status === "CONNECTED";
+            const configured = item.status === "CONFIGURED" || item.status === "CONNECTED";
             return (
               <Card key={item.id} className="p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
@@ -79,7 +81,7 @@ export default function IntegrationsPage() {
                   </p>
                 ) : null}
                 <div className="mt-5 flex items-center gap-2 text-xs text-ink-muted">
-                  {connected ? <Check className="h-3.5 w-3.5 text-brand-accent" /> : null}
+                  {configured ? <Check className="h-3.5 w-3.5 text-info" /> : null}
                   {statusHint(item)}
                 </div>
               </Card>

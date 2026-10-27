@@ -28,7 +28,7 @@ export default function DecisionsPage() {
   const pendingPassports = passports.filter((p) => p.status === "PENDING_APPROVAL");
   const approvedPassports = passports.filter((p) => p.status === "APPROVED");
   const rejectedPassports = passports.filter((p) => p.status === "REJECTED");
-  const executedPassports = passports.filter((p) => p.status === "EXECUTED" || p.status === "VERIFIED");
+  const legacyExecutionStatuses = passports.filter((p) => p.status === "EXECUTED" || p.status === "VERIFIED");
 
   const decideMutation = useMutation({
     mutationFn: ({ passportId, decision }: { passportId: string; decision: "APPROVE" | "REJECT" }) =>
@@ -38,10 +38,10 @@ export default function DecisionsPage() {
       queryClient.invalidateQueries({ queryKey: ["commitments"] });
       queryClient.invalidateQueries({ queryKey: ["risks"] });
       toast({
-        title: decision === "APPROVE" ? "Action approved" : "Action rejected",
+        title: decision === "APPROVE" ? "Approval recorded" : "Proposal rejected",
         description: decision === "APPROVE"
-          ? "CONVIA will execute the action and verify the outcome."
-          : "The action passport has been dismissed.",
+          ? "No external action ran. An execution integration is not connected."
+          : "The proposal was rejected. No external action ran.",
       });
       setIsPassportOpen(false);
       setSelectedPassport(null);
@@ -64,7 +64,7 @@ export default function DecisionsPage() {
       <PageHeader
         eyebrow="Human approval layer"
         title="Decisions"
-        description="CONVIA prepares actions. You decide what moves forward. Nothing executes without you."
+        description="Review proposals and record your decision. External action execution remains unavailable until a real handler is connected."
         icon={<ShieldAlert className="h-5 w-5" strokeWidth={1.75} />}
         meta={
           <>
@@ -77,7 +77,7 @@ export default function DecisionsPage() {
 
       {isLoading ? (
         <LoadingState label="Loading decisions" rows={2} />
-      ) : pendingPassports.length === 0 && approvedPassports.length === 0 && rejectedPassports.length === 0 && executedPassports.length === 0 ? (
+      ) : pendingPassports.length === 0 && approvedPassports.length === 0 && rejectedPassports.length === 0 && legacyExecutionStatuses.length === 0 ? (
         <EmptyState
           icon={ShieldAlert}
           title="No decisions needed"
@@ -164,7 +164,7 @@ export default function DecisionsPage() {
           )}
 
           {/* History */}
-          {(approvedPassports.length > 0 || rejectedPassports.length > 0 || executedPassports.length > 0) && (
+          {(approvedPassports.length > 0 || rejectedPassports.length > 0 || legacyExecutionStatuses.length > 0) && (
             <section className="space-y-4">
               <h2 className="text-[15px] font-semibold text-ink">Decision history</h2>
 
@@ -177,7 +177,7 @@ export default function DecisionsPage() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-[13.5px] font-semibold text-ink truncate">{passport.action_name}</h3>
-                        <p className="text-[12px] text-ink-secondary">Approved · {passport.executed_at ? formatDateTime(passport.executed_at) : "Pending execution"}</p>
+                        <p className="text-[12px] text-ink-secondary">Approved, not executed · {passport.execution_result?.decided_at ? formatDateTime(passport.execution_result.decided_at) : ""}</p>
                       </div>
                     </div>
                   </Card>
@@ -195,7 +195,7 @@ export default function DecisionsPage() {
                     </div>
                   </Card>
                 ))}
-                {executedPassports.map((passport) => (
+                {legacyExecutionStatuses.map((passport) => (
                   <Card key={passport.id} className="p-5">
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-brand-light bg-brand-pale text-brand-deep">
@@ -204,7 +204,7 @@ export default function DecisionsPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="text-[13.5px] font-semibold text-ink truncate">{passport.action_name}</h3>
                         <p className="text-[12px] text-ink-secondary">
-                          {passport.status === "VERIFIED" ? "Executed & verified" : "Executed"} · {passport.verified_at ? formatDateTime(passport.verified_at) : passport.executed_at ? formatDateTime(passport.executed_at) : ""}
+                          Legacy status: {passport.status === "VERIFIED" ? "verified" : "executed"} · not confirmed by this build
                         </p>
                       </div>
                     </div>
@@ -217,9 +217,8 @@ export default function DecisionsPage() {
           <Card>
             <CardBody>
               <p className="text-[12.5px] leading-relaxed text-ink-secondary">
-                Every meaningful action in CONVIA creates an <strong>Action Passport</strong> — a structured record
-                explaining what the action is, why it&apos;s needed, the evidence, risk level, reversibility, and what
-                happens if you approve or reject it. This is your approval layer. CONVIA never acts without you.
+                Recovery proposals use an <strong>Action Passport</strong> to record their description and your
+                decision. Approving or rejecting a proposal does not run an external action in this build.
               </p>
             </CardBody>
           </Card>

@@ -28,11 +28,11 @@ class Orchestrator:
         pipeline = [
             (self.context_agent, "Extracting context, entities & constraints"),
             (self.commitment_agent, "Extracting commitments & obligations"),
-            (self.planning_agent, "Building mission DAG & dependency structure"),
-            (self.research_agent, "Gathering verified external research via Tavily"),
+            (self.planning_agent, "Grouping the objective into mission phrases"),
+            (self.research_agent, "Checking whether current external research is needed"),
             (self.risk_agent, "Evaluating schedule collisions & budget risk"),
             (self.critic_agent, "Critiquing plan assumptions and vulnerabilities"),
-            (self.execution_agent, "Preparing Action Passport for recovery"),
+            (self.execution_agent, "Checking for a supported external action handler"),
         ]
 
         for agent, desc in pipeline:
@@ -45,18 +45,22 @@ class Orchestrator:
 
             try:
                 state = await agent.execute(state)
+                agent_log = next(
+                    (entry for entry in reversed(state.run_logs) if entry.get("agent") == agent_name),
+                    {},
+                )
                 await event_bus.publish("agent.completed", {
                     "agent": agent_name,
                     "description": desc,
-                    "status": "SUCCESS",
+                    "status": agent_log.get("status", "COMPLETED"),
                     "user_id": user_id
                 })
             except Exception as e:
-                logger.error(f"Agent {agent_name} failed: {e}")
+                logger.warning("Agent %s failed (%s)", agent_name, type(e).__name__)
                 await event_bus.publish("agent.completed", {
                     "agent": agent_name,
-                    "status": "ERROR",
-                    "error": str(e),
+                    "status": "FAILED",
+                    "error": "Agent execution failed",
                     "user_id": user_id
                 })
 

@@ -29,15 +29,15 @@ export const SearchCommand: React.FC<SearchCommandProps> = ({
     className={cn(
       "group flex h-10 w-full items-center gap-2.5 rounded-[10px] px-3 text-left text-[13px] transition-all duration-150 ease-out",
       variant === "surface"
-        ? "border border-line bg-surface text-ink-muted shadow-card hover:border-line-strong hover:bg-surface-muted"
-        : "convia-on-brand-control text-white/80 hover:text-white",
+        ? "border border-line-strong bg-surface text-ink-muted shadow-card hover:border-brand hover:bg-surface-muted"
+        : "convia-on-brand-control text-white hover:text-white",
       className
     )}
   >
     <Search
       className={cn(
         "h-4 w-4 shrink-0 transition-colors",
-        variant === "surface" ? "text-ink-muted group-hover:text-ink-secondary" : "text-white/70"
+        variant === "surface" ? "text-ink-muted group-hover:text-ink-secondary" : "text-white"
       )}
       strokeWidth={1.9}
     />
@@ -47,7 +47,7 @@ export const SearchCommand: React.FC<SearchCommandProps> = ({
         "hidden shrink-0 items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex",
         variant === "surface"
           ? "border-line bg-surface-sunken text-ink-muted"
-          : "border-white/20 bg-white/10 text-white/80"
+          : "border-white/30 bg-white/10 text-white"
       )}
     >
       ⌘K

@@ -29,7 +29,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onOpenMenu, onOpenVoice, o
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-lg lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface lg:hidden"
     >
       <ul className="flex items-stretch justify-between px-1 pb-[env(safe-area-inset-bottom)]">
         {PRIMARY.map((item) => {
@@ -40,7 +40,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onOpenMenu, onOpenVoice, o
               <Link
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-1 py-2.5 text-[10.5px] font-medium transition-colors duration-150 ease-out",
+                  "flex flex-col items-center gap-1 px-1 py-2.5 text-[11.5px] font-medium transition-colors duration-150 ease-out",
                   active ? "text-brand-deep" : "text-ink-muted"
                 )}
               >
@@ -62,7 +62,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onOpenMenu, onOpenVoice, o
           <button
             type="button"
             onClick={onOpenMenu}
-            className="flex w-full flex-col items-center gap-1 px-1 py-2.5 text-[10.5px] font-medium text-ink-muted"
+            className="flex w-full flex-col items-center gap-1 px-1 py-2.5 text-[11.5px] font-medium text-ink-muted"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-[10px]">
               <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={1.75} />

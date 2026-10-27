@@ -26,7 +26,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   onCapture,
   suggestions = [],
   className,
-  placeholder = "Ask anything about your goals, commitments or next steps...",
+  placeholder = "Ask a general question, or capture an objective to save it...",
 }) => {
   const [prompt, setPrompt] = useState("");
   const [answer, setAnswer] = useState("");
@@ -157,7 +157,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                   ? "Local continuity engine"
                   : "CONVIA AI"}
               {provider && isLocalProvider(provider) && askState === "done" ? (
-                <span className="ml-auto rounded-full border border-[#F7E2B8] bg-warning-light px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-[#B87A0E]">
+                <span className="ml-auto rounded-full border border-[#F7E2B8] bg-warning-light px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-warning">
                   No API key
                 </span>
               ) : null}
@@ -165,7 +165,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-secondary">
               {askState === "asking"
-                ? "Reading your commitments, missions and blind spots..."
+                ? "Preparing an answer from the prompt you entered..."
                 : askState === "error"
                   ? "The reasoning service did not respond. Nothing was changed — try again in a moment."
                   : answer}

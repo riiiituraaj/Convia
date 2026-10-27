@@ -49,7 +49,7 @@ export const ActivityList: React.FC<ActivityListProps> = ({
           <EmptyState
             icon={History}
             title="No activity yet"
-            description="Agent runs and continuity events will be listed here as they happen."
+            description="Saved agent run records will appear here when available. Background monitoring is not connected."
           />
         </div>
       ) : (

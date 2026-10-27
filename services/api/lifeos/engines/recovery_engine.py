@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List
 from lifeos.models.commitment import Commitment
 from lifeos.models.risk import Risk
@@ -9,57 +10,53 @@ from lifeos.core.event_bus import event_bus
 class RecoveryEngine:
     @staticmethod
     def generate_strategies(commitment_title: str, reason: str, context: str = "") -> List[RecoveryOption]:
-        """Generates realistic multi-tier recovery options when a commitment is at risk."""
+        """Suggest review steps without claiming to schedule or contact anyone."""
         options = [
             RecoveryOption(
                 id=f"opt_{uuid.uuid4().hex[:6]}",
-                title="Option A: Fast-track with focused block",
-                description="Block immediate 90-minute deep work session and defer non-critical errands.",
+                title="Review the next focused work block",
+                description="Choose a time for focused work and decide which lower-priority work can wait.",
                 effort="MEDIUM",
                 risk="LOW",
-                expected_outcome="Completes deliverable tonight on schedule.",
+                expected_outcome="A user-chosen next step for this commitment.",
                 affected_commitments=[commitment_title],
                 action_type="FAST_TRACK",
                 action_payload={"time_block_minutes": 90}
             ),
             RecoveryOption(
                 id=f"opt_{uuid.uuid4().hex[:6]}",
-                title="Option B: Scope reduction & milestone delivery",
-                description="Deliver core v1 functionality immediately, follow up with auxiliary assets tomorrow.",
+                title="Consider a smaller milestone",
+                description="Decide whether a reduced deliverable would still meet the recipient's needs.",
                 effort="LOW",
                 risk="MEDIUM",
-                expected_outcome="Unblocks teammate immediately with 80% capability.",
+                expected_outcome="A clearer scope to discuss with the recipient.",
                 affected_commitments=[commitment_title],
                 action_type="SCOPE_REDUCTION",
-                action_payload={"reduction_percentage": 20}
+                action_payload={}
             ),
             RecoveryOption(
                 id=f"opt_{uuid.uuid4().hex[:6]}",
-                title="Option C: Proactive extension request",
-                description="Prepare polite notification explaining dependency delay and propose adjusted 12-hour window.",
+                title="Review whether the due date needs to change",
+                description="If needed, prepare a revised date to discuss. CONVIA cannot send a message.",
                 effort="LOW",
                 risk="LOW",
-                expected_outcome="Protects stakeholder trust and prevents silent slippage.",
+                expected_outcome="A proposed timeline for the user to confirm.",
                 affected_commitments=[commitment_title],
                 action_type="EXTENSION",
-                action_payload={"hours_extended": 12}
+                action_payload={}
             )
         ]
         return options
 
 
 class ContinuityEngine:
-    """Continuously observes state changes, external events, and triggers proactive re-evaluations."""
+    """Publish explicitly supplied, user-scoped change events."""
 
     @staticmethod
     async def process_external_change(change_type: str, details: Dict[str, Any], user_id: str):
-        if change_type == "FLIGHT_PRICE_INCREASE":
-            # Section 87 Example: Flight ₹8,000 -> ₹12,500
-            await event_bus.publish("risk.created", {
+        if change_type == "OBSERVED_CHANGE" and details.get("summary"):
+            await event_bus.publish("external.change_observed", {
                 "user_id": user_id,
-                "title": "Flight Cost Increased to ₹12,500",
-                "severity": "HIGH",
-                "reason": "Compresses Bangalore move budget ceiling by ₹4,500",
                 "details": details
             })
 
@@ -74,13 +71,13 @@ class BlindSpotsEngine:
         schedule_conflicts = []
 
         for c in commitments:
-            if c.recipient and c.status in ("IN_PROGRESS", "AT_RISK", "PENDING_CONFIRMATION"):
+            if c.status == "PENDING_CONFIRMATION":
                 waiting_on_user.append({
                     "commitment_id": c.id,
                     "action": c.action,
                     "recipient": c.recipient,
                     "status": c.status,
-                    "reason": f"{c.recipient} is waiting for '{c.action}'"
+                    "reason": "Review and confirm the captured commitment details.",
                 })
 
             if c.risk_level in ("HIGH", "CRITICAL"):
@@ -91,25 +88,29 @@ class BlindSpotsEngine:
                     "consequences": c.consequences or "Potential bottleneck"
                 })
 
-        # Add signature life observation if empty
-        if not waiting_on_user:
-            waiting_on_user.append({
-                "action": "API Review for Engineering Team",
-                "recipient": "Engineering Team",
-                "reason": "Teammates depend on API endpoints to complete frontend client wiring tonight."
-            })
+            if c.deadline and c.status not in ("COMPLETED", "VERIFIED", "CLOSED"):
+                deadline = c.deadline
+                if deadline.tzinfo is None:
+                    deadline = deadline.replace(tzinfo=timezone.utc)
+                remaining = deadline - datetime.now(timezone.utc)
+                if timedelta(0) <= remaining <= timedelta(hours=48):
+                    hours = max(1, int(remaining.total_seconds() // 3600))
+                    expiring_windows.append({
+                        "commitment_id": c.id,
+                        "title": c.action,
+                        "time_left": f"{hours} hour(s)",
+                        "warning": "A user-supplied deadline is within the next 48 hours.",
+                    })
 
-        expiring_windows.append({
-            "title": "Advance Flight Fare Window",
-            "time_left": "36 hours",
-            "warning": "BLR route airfare typically rises 40% when booked within 14 days of departure."
-        })
-
-        insights = [
-            "You have 1 teammate actively waiting on a deliverable tonight.",
-            "Travel reservation deadline conflicts with tight Bangalore move budget.",
-            "All identity and internship documentation is confirmed and protected."
-        ]
+        insights = []
+        if waiting_on_user:
+            insights.append(f"{len(waiting_on_user)} captured commitment(s) need confirmation.")
+        if unresolved_deps:
+            insights.append(f"{len(unresolved_deps)} saved commitment(s) are marked high risk.")
+        if expiring_windows:
+            insights.append(f"{len(expiring_windows)} user-supplied deadline(s) are within 48 hours.")
+        if not insights:
+            insights.append("No current blind spots were found in saved commitment data.")
 
         return {
             "total_found": len(unresolved_deps) + len(waiting_on_user) + len(expiring_windows),
@@ -124,55 +125,48 @@ class BlindSpotsEngine:
 class ResolveDayEngine:
     @staticmethod
     def generate_plan(commitments: List[Commitment]) -> Dict[str, Any]:
-        """Generates an actionable chronological schedule protecting critical commitments."""
+        """List today's stored deadlines without inventing calendar blocks."""
+        now = datetime.now(timezone.utc)
+        active = []
+        for commitment in commitments:
+            if commitment.status in ("COMPLETED", "VERIFIED", "CLOSED") or not commitment.deadline:
+                continue
+            deadline = commitment.deadline
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=timezone.utc)
+            if deadline.date() == now.date():
+                active.append(commitment)
+        active.sort(
+            key=lambda item: (
+                item.deadline.replace(tzinfo=timezone.utc).timestamp()
+                if item.deadline.tzinfo is None else item.deadline.timestamp(),
+                item.priority,
+                item.created_at.replace(tzinfo=timezone.utc).timestamp()
+                if item.created_at.tzinfo is None else item.created_at.timestamp(),
+            )
+        )
         schedule = [
             {
-                "time_slot": "09:00 - 11:30",
-                "commitment_id": "api_delivery",
-                "title": "Deep Work: Finalize API Endpoints & Auth Handshake",
-                "priority": "HIGH",
-                "why": "Unblocks engineering team and meets tonight's deliverable guarantee.",
-                "estimated_minutes": 150,
-                "action_type": "EXECUTION"
-            },
-            {
-                "time_slot": "12:00 - 12:45",
-                "commitment_id": "travel_booking",
-                "title": "Review Bangalore Travel Options & Lock Fare",
-                "priority": "HIGH",
-                "why": "Protects budget headroom before weekend surge.",
-                "estimated_minutes": 45,
-                "action_type": "DECISION"
-            },
-            {
-                "time_slot": "14:30 - 15:30",
-                "commitment_id": "housing_confirm",
-                "title": "Confirm HSR Coliving Terms & Review Agreement",
-                "priority": "MEDIUM",
-                "why": "Guarantees lodging before Bangalore arrival.",
-                "estimated_minutes": 60,
-                "action_type": "VERIFICATION"
-            },
-            {
-                "time_slot": "19:00 - 20:00",
-                "commitment_id": "team_sync",
-                "title": "Push PR, Run CI Tests & Hand Off to Team",
-                "priority": "HIGH",
-                "why": "Closes the loop on today's primary commitment.",
-                "estimated_minutes": 60,
-                "action_type": "CLOSURE"
+                "time_slot": "Unscheduled",
+                "commitment_id": item.id,
+                "title": item.action,
+                "priority": item.priority,
+                "why": "This commitment has a stored deadline today; no calendar block is connected.",
+                "estimated_minutes": 0,
+                "action_type": "REVIEW",
             }
+            for item in active
         ]
 
         return {
-            "plan_date": "Today",
-            "total_hours_required": 5.25,
-            "critical_commitments_protected": 3,
+            "plan_date": now.date().isoformat(),
+            "total_hours_required": 0.0,
+            "critical_commitments_protected": 0,
             "schedule": schedule,
-            "tradeoffs_made": [
-                "Deferred non-urgent email sorting to tomorrow morning",
-                "Protected evening API closure block from meeting interruptions"
-            ],
-            "continuity_status": "OPTIMAL - All 3 high-priority obligations are fully scheduled."
+            "tradeoffs_made": [],
+            "continuity_status": (
+                "UNSCHEDULED - Calendar integration is unavailable; listed items are user-supplied deadlines only."
+                if schedule else "NO DUE ITEMS - No active commitments with deadlines today."
+            ),
         }
 

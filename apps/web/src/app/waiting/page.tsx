@@ -50,14 +50,14 @@ export default function WaitingPage() {
   return (
     <div className="space-y-7 animate-fade-in">
       <PageHeader
-        eyebrow="Bidirectional obligations"
-        title="Waiting On"
-        description="Two sides of every promise. Who you owe, and who owes you."
+        eyebrow="Commitment relationships"
+        title="Recipients & dependencies"
+        description="Items grouped by recipients and dependencies saved on your commitments. These records do not confirm another person's current status."
         icon={<Users className="h-5 w-5" strokeWidth={1.75} />}
         meta={
           <>
-            <Badge tone="warning" dot>{theyWaitOnYou.length} waiting on you</Badge>
-            <Badge tone="info" dot>{youWaitOnThem.length} you&apos;re waiting on</Badge>
+            <Badge tone="warning" dot>{theyWaitOnYou.length} recipient linked</Badge>
+            <Badge tone="info" dot>{youWaitOnThem.length} explicit dependencies</Badge>
           </>
         }
       />
@@ -67,19 +67,19 @@ export default function WaitingPage() {
       ) : theyWaitOnYou.length === 0 && youWaitOnThem.length === 0 ? (
         <EmptyState
           icon={UserCheck}
-          title="Nobody is waiting"
-          description="All loops are closed. Enjoy the clarity."
+          title="No recipient or dependency records"
+          description="Add recipients or explicit dependencies to commitments to see them here."
         />
       ) : (
         <>
-          {/* They're waiting on you */}
+          {/* Commitments with recipients */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-warning-light bg-warning-light text-[#B87A0E]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-warning-light bg-warning-light text-warning">
                   <AlertTriangle className="h-4 w-4" strokeWidth={1.8} />
                 </span>
-                <h2 className="text-[17px] font-semibold text-ink">They&apos;re waiting on you</h2>
+                <h2 className="text-[17px] font-semibold text-ink">Commitments with recipients</h2>
               </div>
               <Badge tone="warning" dot>{theyWaitOnYou.length}</Badge>
             </div>
@@ -88,7 +88,7 @@ export default function WaitingPage() {
               <Card>
                 <CardBody className="py-8 text-center">
                   <UserCheck className="h-10 w-10 mx-auto text-success" strokeWidth={1.5} />
-                  <p className="mt-3 text-[13px] text-ink-secondary">Nobody is currently waiting on you.</p>
+                  <p className="mt-3 text-[13px] text-ink-secondary">No open commitments currently list a recipient.</p>
                 </CardBody>
               </Card>
             ) : (
@@ -99,7 +99,7 @@ export default function WaitingPage() {
                     <Card key={item.commitment_id} interactive className="p-5 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-warning-light bg-warning-light text-[#B87A0E]">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-warning-light bg-warning-light text-warning">
                             <Users className="h-5 w-5" strokeWidth={1.8} />
                           </span>
                           <div>
@@ -142,14 +142,14 @@ export default function WaitingPage() {
             )}
           </section>
 
-          {/* You're waiting on them */}
+          {/* Explicit dependencies */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-info-light bg-info-light text-info">
                   <Clock className="h-4 w-4" strokeWidth={1.8} />
                 </span>
-                <h2 className="text-[17px] font-semibold text-ink">You&apos;re waiting on them</h2>
+                <h2 className="text-[17px] font-semibold text-ink">Explicit dependencies on others</h2>
               </div>
               <Badge tone="info" dot>{youWaitOnThem.length}</Badge>
             </div>
@@ -158,7 +158,7 @@ export default function WaitingPage() {
               <Card>
                 <CardBody className="py-8 text-center">
                   <UserCheck className="h-10 w-10 mx-auto text-success" strokeWidth={1.5} />
-                  <p className="mt-3 text-[13px] text-ink-secondary">You&apos;re not waiting on anyone.</p>
+                  <p className="mt-3 text-[13px] text-ink-secondary">No open commitments list a dependency on another person.</p>
                 </CardBody>
               </Card>
             ) : (
@@ -174,7 +174,7 @@ export default function WaitingPage() {
                           </span>
                           <div>
                             <h3 className="text-[14px] font-semibold text-ink">{item.person}</h3>
-                            <p className="mt-0.5 text-[12px] text-ink-secondary">Waiting for: {item.waiting_for}</p>
+                            <p className="mt-0.5 text-[12px] text-ink-secondary">Dependency: {item.waiting_for}</p>
                           </div>
                         </div>
                         <Badge tone="info" dot>{item.status}</Badge>
@@ -198,9 +198,9 @@ export default function WaitingPage() {
           <Card>
             <CardBody>
               <p className="text-[12.5px] leading-relaxed text-ink-secondary">
-                This view shows the bidirectional nature of every commitment. When you tell CONVIA
-                &quot;I promised Rahul the design&quot;, Rahul appears under &quot;They&apos;re waiting on you&quot;.
-                When Priya hasn&apos;t sent the dataset you need, she appears under &quot;You&apos;re waiting on them&quot;.
+                Recipient and dependency fields are supplied by you. A recipient is shown with its
+                open commitment, and a dependency is shown with the person and action recorded in that field.
+                CONVIA does not verify another person&apos;s status.
               </p>
             </CardBody>
           </Card>

@@ -100,8 +100,7 @@ export const CommitmentCard: React.FC<CommitmentCardProps> = ({
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-line-subtle pt-3.5">
         <span className="text-[11.5px] text-ink-muted">
-          Autonomy L{commitment.autonomy_level} · Confidence{" "}
-          {Math.round((commitment.confidence ?? 0) * 100)}%
+          Autonomy L{commitment.autonomy_level} · {commitment.status === "PENDING_CONFIRMATION" ? "Needs confirmation" : "Saved commitment"}
         </span>
 
         <div className="flex items-center gap-2">

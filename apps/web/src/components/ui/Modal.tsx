@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./Button";
@@ -35,29 +35,63 @@ export const Modal: React.FC<ModalProps> = ({
   className,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const titleId = useId();
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable?.length) {
+          event.preventDefault();
+          dialogRef.current?.focus();
+          return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !dialogRef.current?.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
 
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     window.addEventListener("keydown", handleKeyDown);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    dialogRef.current?.focus();
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    (firstFocusable ?? dialogRef.current)?.focus();
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-[rgba(11,47,36,0.42)] p-0 backdrop-blur-[2px] animate-fade-in sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-[rgba(23,43,69,0.52)] p-0 animate-fade-in sm:items-center sm:p-6">
       <div
         aria-hidden="true"
         className="absolute inset-0"
@@ -67,7 +101,7 @@ export const Modal: React.FC<ModalProps> = ({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
           "relative z-10 w-full rounded-t-2xl border border-line bg-surface shadow-pop outline-none animate-scale-in sm:rounded-2xl",
@@ -88,7 +122,7 @@ export const Modal: React.FC<ModalProps> = ({
                   {eyebrow}
                 </p>
               ) : null}
-              <h2 className="text-[17px] font-semibold tracking-tight text-ink">{title}</h2>
+              <h2 id={titleId} className="text-[17px] font-semibold tracking-tight text-ink">{title}</h2>
               {subtitle ? (
                 <p className="mt-0.5 text-[13px] text-ink-secondary">{subtitle}</p>
               ) : null}

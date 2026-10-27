@@ -13,6 +13,10 @@ import {
   ArrowRight,
   Globe2,
   ExternalLink,
+  FileText,
+  Sparkles,
+  BookmarkPlus,
+  Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -23,23 +27,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 
-interface ResearchResult {
-  title: string;
-  url: string;
-  source: string;
-  snippet: string;
-  relevance: number;
-}
-
-interface ResearchPayload {
-  query: string;
-  results: ResearchResult[];
-  answer: string;
-  evidence: string[];
-  provider: string;
-  success: boolean;
-  error: string;
-}
+type ResearchPayload = Awaited<ReturnType<typeof api.runResearch>>;
 
 const SECTION_ICONS = {
   missions: Target,
@@ -122,6 +110,38 @@ export default function SearchPage() {
       }),
   });
 
+  const toArtifactMutation = useMutation({
+    mutationFn: (sessionId: string) => api.convertResearchToArtifact(sessionId),
+    onSuccess: (data) =>
+      toast({
+        title: "Saved as Artifact",
+        description: `Deliverable artifact created: ${data.title}`,
+        tone: "success",
+      }),
+    onError: () =>
+      toast({
+        title: "Conversion failed",
+        description: "Could not convert research session into an artifact.",
+        tone: "danger",
+      }),
+  });
+
+  const toMissionMutation = useMutation({
+    mutationFn: (sessionId: string) => api.convertResearchToMission(sessionId),
+    onSuccess: (data) =>
+      toast({
+        title: "Converted to Mission",
+        description: `New mission created: ${data.title}`,
+        tone: "success",
+      }),
+    onError: () =>
+      toast({
+        title: "Conversion failed",
+        description: "Could not convert research session into a mission.",
+        tone: "danger",
+      }),
+  });
+
   const performSearch = React.useCallback(() => {
     if (!query.trim()) {
       setResults([]);
@@ -183,7 +203,7 @@ export default function SearchPage() {
           type: "people",
           title: p.name,
           subtitle: `${p.open_commitments} open commitments`,
-          meta: p.waiting_on_user.length > 0 ? "Waiting on you" : "Clear",
+          meta: p.waiting_on_user.length > 0 ? "Recipient on active commitment" : "No active recipient record",
           data: p,
           timestamp: p.last_interaction,
           href: resultHref("people", p),
@@ -198,7 +218,7 @@ export default function SearchPage() {
           type: "memories",
           title: m.content.slice(0, 80) + (m.content.length > 80 ? "…" : ""),
           subtitle: m.category,
-          meta: `Confidence: ${Math.round(m.confidence * 100)}%`,
+          meta: `Memory · ${m.category}`,
           data: m,
           timestamp: m.created_at,
           href: resultHref("memories", m),
@@ -262,9 +282,9 @@ export default function SearchPage() {
   return (
     <div className="space-y-7 animate-fade-in">
       <PageHeader
-        eyebrow="Semantic search"
+        eyebrow="Workspace search"
         title="Search CONVIA"
-        description="Find anything across missions, commitments, people, risks, and memories. Natural language queries supported."
+        description="Search saved missions, commitments, people, risks, and memories, or run a separate optional web research query."
         icon={<Search className="h-5 w-5" strokeWidth={1.75} />}
       />
 
@@ -318,12 +338,15 @@ export default function SearchPage() {
               <Globe2 className="h-4 w-4 text-brand" strokeWidth={1.75} />
               <h2 className="text-[14px] font-semibold text-ink">Web research</h2>
             </div>
-            <Badge tone={research.provider === "tavily" ? "success" : "warning"} dot>
-              {research.provider === "tavily" ? "Live · Tavily" : "Offline · no Tavily key"}
+            <Badge tone={research.success ? "success" : "warning"} dot>
+              {research.success ? "Tavily request completed" : "Unavailable · no live sources"}
             </Badge>
           </div>
           {research.answer ? (
-            <p className="mt-3 text-[13px] leading-relaxed text-ink-secondary">{research.answer}</p>
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">Tavily summary</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-ink-secondary">{research.answer}</p>
+            </div>
           ) : null}
           {research.error ? (
             <p className="mt-2 text-[12.5px] text-warning">{research.error}</p>
@@ -340,8 +363,9 @@ export default function SearchPage() {
                         {item.snippet}
                       </p>
                       <p className="mt-1.5 text-[11px] text-ink-muted">
-                        {item.source}
-                        {!offline ? ` · relevance ${Math.round(item.relevance * 100)}%` : " · offline note"}
+                        [{item.id}] {item.domain || "web source"}
+                        {item.relevance != null ? ` · relevance ${Math.round(item.relevance * 100)}%` : ""}
+                        {item.published_at ? ` · published ${item.published_at}` : ""}
                       </p>
                     </div>
                     {!offline ? (
@@ -362,7 +386,7 @@ export default function SearchPage() {
               }
               return (
                 <a
-                  key={item.url + item.title}
+                  key={item.id}
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -385,6 +409,43 @@ export default function SearchPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          {research.synthesis ? (
+            <div className="mt-5 rounded-xl border border-brand/20 bg-brand-pale/40 p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand">
+                <Sparkles className="h-4 w-4" /> Source-linked synthesis
+              </div>
+              <div className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-ink">
+                {research.synthesis}
+              </div>
+              <p className="mt-2 text-[11px] text-ink-muted">
+                Citation IDs are checked against retrieved sources; source support is not independently fact-checked.
+              </p>
+            </div>
+          ) : null}
+
+          {research.session_id ? (
+            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line-subtle pt-4">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => toArtifactMutation.mutate(research.session_id)}
+                disabled={toArtifactMutation.isPending}
+              >
+                {toArtifactMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-1.5 h-3.5 w-3.5" />}
+                Save as Artifact
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toMissionMutation.mutate(research.session_id)}
+                disabled={toMissionMutation.isPending}
+              >
+                {toMissionMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Target className="mr-1.5 h-3.5 w-3.5" />}
+                Convert to Mission
+              </Button>
             </div>
           ) : null}
         </Card>
@@ -452,7 +513,7 @@ export default function SearchPage() {
                 { q: "Bangalore", desc: "Mission-related content" },
                 { q: "API tonight", desc: "Time-sensitive commitments" },
                 { q: "budget", desc: "Budget constraints and risks" },
-                { q: "waiting on", desc: "People waiting on you" },
+                { q: "waiting on", desc: "Search saved recipients and dependencies" },
               ].map((suggestion, index) => (
                 <button
                   key={index}

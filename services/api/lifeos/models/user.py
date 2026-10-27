@@ -33,4 +33,5 @@ class User(Base):
     memories = relationship("Memory", back_populates="user", cascade="all, delete-orphan")
     risks = relationship("Risk", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
 

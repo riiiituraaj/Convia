@@ -13,6 +13,24 @@ class AgentRunCreate(AgentRunBase):
     pass
 
 
+class AgentStepResponse(BaseModel):
+    id: str
+    run_id: str
+    step_index: int
+    title: str
+    tool_name: str
+    input_payload: Dict[str, Any] = Field(default_factory=dict)
+    output_payload: Dict[str, Any] = Field(default_factory=dict)
+    status: str
+    error_message: Optional[str] = None
+    requires_approval: bool = False
+    action_passport_id: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AgentRunResponse(AgentRunBase):
     id: str
     user_id: str
@@ -21,10 +39,21 @@ class AgentRunResponse(AgentRunBase):
     latency_ms: float
     output_payload: Dict[str, Any] = Field(default_factory=dict)
     events: List[Dict[str, Any]] = Field(default_factory=list)
+    plan_json: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
     completed_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AgentRunDetailResponse(AgentRunResponse):
+    steps: List[AgentStepResponse] = Field(default_factory=list)
+
+
+class AgentRunStartRequest(BaseModel):
+    task_description: str = Field(min_length=1, max_length=5000)
+    mission_id: Optional[str] = None
+    conversation_id: Optional[str] = None
 
 
 class MemoryBase(BaseModel):

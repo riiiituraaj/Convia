@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
 from lifeos.schemas.commitment import CommitmentCreate
 from lifeos.schemas.mission import MissionCreate
@@ -20,19 +20,21 @@ class ExtractedMission(MissionCreate):
 
 
 class IntentParseRequest(BaseModel):
-    raw_text: str
-    context: Optional[str] = None
-    source: str = "text" # "text", "voice", "calendar", "email"
+    raw_text: str = Field(min_length=1, max_length=10000)
+    context: Optional[str] = Field(default=None, max_length=4000)
+    conversation_id: Optional[str] = Field(default=None, max_length=36)
+    source: Literal["text", "voice", "calendar", "email"] = "text"
 
 
 class IntentParseResponse(BaseModel):
+    conversation_id: str
     recognized_intent: str
     extracted_mission: Optional[ExtractedMission] = None
     commitments: List[CandidateCommitment] = Field(default_factory=list)
     signals_detected: List[str] = Field(default_factory=list)
     summary_message: str
-    confidence: float = 0.95
-    model_used: str = "nvidia/nemotron-4-340b-instruct"
+    confidence: Optional[float] = None
+    model_used: str = "local-deterministic"
 
 
 class BlindSpotsResponse(BaseModel):

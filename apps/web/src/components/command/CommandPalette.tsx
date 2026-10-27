@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -54,6 +54,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const commands = useMemo<Command[]>(
     () => [
@@ -70,16 +71,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
       {
         id: "find_blind_spots",
-        title: "Find my blind spots",
-        subtitle: "Scan for forgotten dependencies and waiting people",
+        title: "Review saved signals",
+        subtitle: "See pending confirmations, saved risk labels and upcoming deadlines",
         icon: EyeOff,
         group: "Actions",
         action: go("/life#blind-spots", onClose, router.push),
       },
       {
         id: "resolve_my_day",
-        title: "Resolve my day",
-        subtitle: "Generate a realistic plan protecting commitments",
+        title: "Review today's deadlines",
+        subtitle: "List saved commitment deadlines due today; no calendar is connected",
         icon: CalendarCheck,
         group: "Actions",
         action: go("/life#resolve-day", onClose, router.push),
@@ -130,8 +131,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
       {
         id: "open_waiting",
-        title: "Waiting On",
-        subtitle: "Who you owe and who owes you",
+        title: "Recipients & dependencies",
+        subtitle: "Commitment recipients and explicit dependencies you saved",
         icon: Users,
         group: "Navigate",
         action: go("/waiting", onClose, router.push),
@@ -155,7 +156,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       {
         id: "open_agents",
         title: "Agent Center",
-        subtitle: "Autonomous agent executions and telemetry",
+        subtitle: "Saved run records from intent capture and demo loading",
         icon: Bot,
         group: "Navigate",
         action: go("/agents", onClose, router.push),
@@ -163,7 +164,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       {
         id: "open_activity",
         title: "Activity",
-        subtitle: "Live agent run telemetry",
+        subtitle: "Saved run records associated with your account",
         icon: Activity,
         group: "Navigate",
         action: go("/activity", onClose, router.push),
@@ -262,37 +263,72 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           event.preventDefault();
           void command.action();
         }
+        return;
+      }
+      if (event.key === "Tab") {
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable?.length) {
+          event.preventDefault();
+          dialogRef.current?.focus();
+          return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !dialogRef.current?.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
     };
   }, [isOpen, filtered, activeIndex, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    });
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const groups: Array<Command["group"]> = ["Actions", "Navigate"];
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-[rgba(11,47,36,0.42)] p-4 pt-[12vh] backdrop-blur-[2px] animate-fade-in">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-[rgba(23,43,69,0.52)] p-4 pt-[12vh] animate-fade-in">
       <div aria-hidden="true" className="absolute inset-0" onClick={onClose} />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
+        tabIndex={-1}
         className="relative z-10 w-full max-w-xl overflow-hidden rounded-2xl border border-line bg-surface shadow-pop animate-scale-in"
       >
         <div className="flex items-center gap-3 border-b border-line-subtle px-4 py-3">
           <Search className="h-4 w-4 shrink-0 text-ink-muted" strokeWidth={1.9} />
           <input
-            autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search commitments, missions, or anything..."
@@ -316,7 +352,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
               return (
                 <div key={group}>
-                  <p className="px-3 pb-1.5 pt-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+                  <p className="px-3 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
                     {group}
                   </p>
                   <ul>

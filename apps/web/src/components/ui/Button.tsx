@@ -7,16 +7,16 @@ export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "dan
 export type ButtonSize = "sm" | "md" | "lg";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-[10px] font-medium transition-all duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-[10px] font-medium transition-all duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:transform-none disabled:border-line disabled:bg-surface-sunken disabled:text-ink-disabled disabled:shadow-none";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-brand text-white shadow-[0_1px_2px_rgba(11,47,36,0.18)] hover:bg-brand-deep",
   secondary:
     "bg-brand-pale text-brand border border-brand-light hover:bg-brand-light",
-  outline: "bg-surface text-ink border border-line hover:bg-surface-sunken hover:border-line-strong",
+  outline: "bg-surface text-ink border border-line-strong hover:bg-surface-sunken hover:border-brand",
   ghost: "bg-transparent text-ink-secondary hover:bg-surface-sunken hover:text-ink",
   danger: "bg-danger text-white hover:brightness-95",
-  warning: "bg-warning-light text-[#8A5A00] border border-[#F7E2B8] hover:bg-[#FDEBCB]",
+  warning: "bg-warning-light text-warning border border-[#F7E2B8] hover:bg-[#FDEBCB]",
 };
 
 const SIZES: Record<ButtonSize, string> = {
@@ -86,7 +86,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
     aria-label={label}
     title={label}
     className={cn(
-      "inline-flex shrink-0 items-center justify-center rounded-[10px] transition-colors duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex shrink-0 items-center justify-center rounded-[10px] transition-colors duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:cursor-not-allowed disabled:transform-none disabled:border-line disabled:bg-surface-sunken disabled:text-ink-disabled",
       size === "sm" ? "h-8 w-8" : "h-9 w-9",
       variant === "ghost" && "text-ink-secondary hover:bg-surface-sunken hover:text-ink",
       variant === "outline" && "border border-line bg-surface text-ink-secondary hover:bg-surface-sunken",

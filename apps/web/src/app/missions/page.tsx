@@ -47,7 +47,7 @@ export default function MissionsPage() {
       queryClient.invalidateQueries({ queryKey: ["missions"] });
       toast({
         title: "Mission created",
-        description: "CONVIA will start decomposing it into commitments.",
+        description: "The outcome was saved. Add commitments separately from the mission page.",
       });
       setShowCreateModal(false);
       setTitle("");
@@ -71,7 +71,7 @@ export default function MissionsPage() {
       <PageHeader
         eyebrow="Outcomes & life goals"
         title="Missions"
-        description="A mission is a meaningful life outcome translated into a structured graph of objectives, commitments and dependencies."
+        description="Save a life outcome and its current status. Intent capture may group objective phrases; dependencies are not inferred."
         icon={<Target className="h-5 w-5" strokeWidth={1.75} />}
         actions={
           <Button onClick={() => setShowCreateModal(true)}>
@@ -100,7 +100,7 @@ export default function MissionsPage() {
           value={activeMissions.length}
           icon={Target}
           tone="brand"
-          hint="Currently being protected"
+          hint="Saved with active status"
         />
         <StatCard
           label="Average progress"
@@ -122,7 +122,7 @@ export default function MissionsPage() {
           icon={Layers}
           tone={atRiskMissions.length ? "danger" : "success"}
           trendPositive={false}
-          hint="Flagged by the risk engine"
+          hint="Missions saved with at-risk status"
         />
       </div>
 
@@ -219,9 +219,8 @@ export default function MissionsPage() {
       <Card>
         <CardBody>
           <p className="text-[12.5px] leading-relaxed text-ink-secondary">
-            Missions are decomposed by the planning agent into objectives, tasks and external
-            dependencies. Every node tracks its own progress, and blocking edges are surfaced as
-            risks before they become failures.
+            Missions are saved outcomes with a status and any details you provide. The current
+            workspace does not decompose them into tasks or infer dependencies.
           </p>
         </CardBody>
       </Card>
@@ -230,7 +229,7 @@ export default function MissionsPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="New mission"
-        subtitle="Define the outcome; CONVIA will decompose it into commitments"
+        subtitle="Save an outcome, then add commitments separately"
         eyebrow="Life outcome"
         icon={<Target className="h-4 w-4" strokeWidth={1.8} />}
         footer={

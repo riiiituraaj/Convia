@@ -94,7 +94,7 @@ export default function ActivityPage() {
       <PageHeader
         eyebrow="System telemetry"
         title="Activity"
-        description="Every agent execution, tool call, and state change. Transparency into what CONVIA is doing on your behalf."
+        description="Saved agent run records associated with your account. This page does not show live background monitoring."
         icon={<Bot className="h-5 w-5" strokeWidth={1.75} />}
         meta={
           <>
@@ -111,7 +111,7 @@ export default function ActivityPage() {
         <EmptyState
           icon={Bot}
           title="No activity yet"
-          description="Agent runs will appear here as CONVIA processes your intents and monitors commitments."
+          description="There are no saved agent run records for this account. Intent capture does not run a background monitor."
         />
       ) : (
         <>
@@ -140,7 +140,7 @@ export default function ActivityPage() {
                       <p className="mt-1 text-[12px] text-ink-secondary">
                         {run.model_used} · {Math.round(run.latency_ms || 0)}ms
                         {/local-deterministic|fallback/i.test(run.model_used || "") ? (
-                          <span className="ml-2 rounded-full border border-[#F7E2B8] bg-warning-light px-1.5 py-0.5 text-[10px] font-semibold text-[#B87A0E]">
+                          <span className="ml-2 rounded-full border border-[#F7E2B8] bg-warning-light px-1.5 py-0.5 text-[11px] font-semibold text-warning">
                             Local mode
                           </span>
                         ) : null}
@@ -180,9 +180,8 @@ export default function ActivityPage() {
           <Card>
             <CardBody>
               <p className="text-[12.5px] leading-relaxed text-ink-secondary">
-                Activity shows every agent execution in the continuity loop. Each run represents a step in
-                <strong>INTENT → UNDERSTAND → MODEL → PLAN → ACT → OBSERVE → VERIFY → ADAPT → CLOSE</strong>.
-                Failed runs are preserved for debugging and never silently discarded.
+                This page lists saved agent run records only. The current workspace does not run a
+                continuous agent loop or external actions in the background.
               </p>
             </CardBody>
           </Card>

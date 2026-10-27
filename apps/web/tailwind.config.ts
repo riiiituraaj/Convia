@@ -34,7 +34,9 @@ const config: Config = {
         ink: {
           DEFAULT: "var(--color-text)",
           secondary: "var(--color-text-secondary)",
+          tertiary: "var(--color-text-tertiary)",
           muted: "var(--color-text-muted)",
+          disabled: "var(--color-text-disabled)",
         },
         line: {
           DEFAULT: "var(--color-border)",
@@ -44,10 +46,17 @@ const config: Config = {
         danger: {
           DEFAULT: "var(--color-danger)",
           light: "var(--color-danger-light)",
+          subtle: "var(--color-danger-subtle)",
+        },
+        success: {
+          DEFAULT: "var(--color-success)",
+          light: "var(--color-success-light)",
         },
         warning: {
           DEFAULT: "var(--color-warning)",
           light: "var(--color-warning-light)",
+          pale: "var(--color-warning-pale)",
+          dark: "var(--color-warning-dark)",
         },
         info: {
           DEFAULT: "var(--color-info)",

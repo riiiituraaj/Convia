@@ -78,7 +78,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }, []);
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="app-environment min-h-screen">
       <Sidebar
         userName={user?.full_name}
         userEmail={user?.email}
@@ -96,7 +96,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
         seeding={seeding}
       />
 
-      <div className="lg:pl-[264px]">
+      <div className="min-h-screen lg:pl-[224px]">
         <TopBar
           onOpenCommand={() => setIsCommandOpen(true)}
           onOpenVoice={() => setIsVoiceOpen(true)}
@@ -108,7 +108,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           userEmail={user?.email}
         />
 
-        <main className="mx-auto w-full max-w-[1440px] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-14 lg:pt-8">
+        <main className="mx-auto w-full max-w-[1720px] px-4 pb-32 pt-5 sm:px-6 lg:px-7 lg:pb-12 lg:pt-6">
           {children}
         </main>
       </div>

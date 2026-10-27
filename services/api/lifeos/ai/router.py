@@ -12,17 +12,17 @@ class TaskComplexity(str, Enum):
 class ModelRouter:
     @staticmethod
     def _models() -> tuple[str, str, str]:
-        if settings.NVIDIA_API_KEY and not settings.NEBIUS_API_KEY:
-            return (
+        if settings.AI_PROVIDER == "nvidia":
+            return tuple(model or "local-deterministic" for model in (
                 settings.NVIDIA_NIM_FAST_MODEL,
                 settings.NVIDIA_NIM_MODEL,
                 settings.NVIDIA_NIM_REASONING_MODEL,
-            )
-        return (
-            settings.NEBIUS_FAST_MODEL,
+            ))
+        return tuple(model or "local-deterministic" for model in (
+            settings.NEBIUS_FAST_MODEL or settings.NEBIUS_NEMOTRON_MODEL,
             settings.NEBIUS_NEMOTRON_MODEL,
-            settings.NEBIUS_REASONING_MODEL,
-        )
+            settings.NEBIUS_REASONING_MODEL or settings.NEBIUS_NEMOTRON_MODEL,
+        ))
 
     @staticmethod
     def select_model(complexity: TaskComplexity, task_name: str = "") -> str:

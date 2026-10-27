@@ -26,7 +26,7 @@ class Commitment(Base):
     status: Mapped[str] = mapped_column(String(50), default="DETECTED")
     # DETECTED, PENDING_CONFIRMATION, CONFIRMED, PLANNED, IN_PROGRESS, AT_RISK, RECOVERY, COMPLETED, VERIFIED, CLOSED
 
-    confidence: Mapped[float] = mapped_column(Float, default=1.0)       # 0.0 to 1.0
+    confidence: Mapped[float | None] = mapped_column(Float, default=None, nullable=True)
     risk_score: Mapped[float] = mapped_column(Float, default=0.0)       # 0.0 to 1.0 (LOW, MEDIUM, HIGH, CRITICAL)
     risk_level: Mapped[str] = mapped_column(String(20), default="LOW")
 

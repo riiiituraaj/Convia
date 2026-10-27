@@ -42,7 +42,7 @@ export default function MissionControlPage() {
       <EmptyState
         icon={Target}
         title="Mission unavailable"
-        description="This mission could not be loaded from the continuity engine."
+        description="This mission could not be loaded from your workspace."
         action={
           <Link className="text-sm font-semibold text-brand" href="/missions">
             Back to missions
@@ -105,7 +105,7 @@ export default function MissionControlPage() {
           </p>
           <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-ink-secondary">
             <CircleCheckBig className="h-3.5 w-3.5" />
-            Threads tracked to closure
+            Linked commitment records
           </p>
         </Card>
         <Card className="p-5">
@@ -141,7 +141,7 @@ export default function MissionControlPage() {
             <EmptyState
               icon={Layers}
               title="Graph is still forming"
-              description="The planning agent has not created mission nodes yet. Seed the flagship demo or capture an intent to populate this graph."
+              description="This mission has no objective nodes. Intent capture may group objective phrases; dependencies are not inferred."
             />
           )}
         </CardBody>
@@ -235,7 +235,7 @@ export default function MissionControlPage() {
       <Card>
         <CardHeader
           title="Commitments"
-          subtitle="Owened work that keeps this mission alive"
+          subtitle="Commitments linked to this saved outcome"
           icon={<CheckCircle2 className="h-4 w-4" />}
           action={
             <Link href="/commitments" className={buttonClasses("secondary", "sm")}>
@@ -249,7 +249,7 @@ export default function MissionControlPage() {
             <EmptyState
               icon={CircleCheckBig}
               title="No commitments linked yet"
-              description="Capture a commitment or parse an intent so this mission has protectable threads."
+              description="Add a commitment and link it to this mission to see it here."
             />
           ) : (
             <div className="space-y-3">

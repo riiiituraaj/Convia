@@ -4,7 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 const FIELD_BASE =
-  "w-full rounded-[10px] border bg-surface text-sm text-ink placeholder:text-ink-muted transition-[border-color,box-shadow] duration-150 ease-out focus:outline-none focus:border-brand-accent focus:shadow-focus disabled:cursor-not-allowed disabled:bg-surface-sunken";
+  "w-full rounded-[10px] border border-line-strong bg-surface text-sm text-ink placeholder:text-ink-muted transition-[border-color,box-shadow] duration-150 ease-out focus:outline-none focus:border-brand-accent focus:shadow-focus disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-ink-disabled";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from typing import List
 from lifeos.core.database import get_db
 from lifeos.api.deps import get_current_user
@@ -9,7 +9,6 @@ from lifeos.models.risk import Risk
 from lifeos.models.action import ActionPassport
 from lifeos.schemas.risk import RiskResponse, RecoveryExecuteRequest
 from lifeos.schemas.action import ActionPassportResponse, ActionDecisionRequest
-from lifeos.agents.execution_agent import VerificationAgent
 from lifeos.core.event_bus import event_bus
 from datetime import datetime, timezone
 
@@ -94,56 +93,39 @@ async def decide_action(
     if not passport:
         raise HTTPException(status_code=404, detail="Action passport not found")
 
-    if payload.decision == "APPROVE":
-        passport.status = "EXECUTED"
-        passport.executed_at = datetime.now(timezone.utc)
-        passport.execution_result = {
-            "status": "SUCCESS",
-            "message": f"Recorded action '{passport.action_name}' as executed after approval."
-        }
+    if payload.decision not in {"APPROVE", "REJECT"}:
+        raise HTTPException(status_code=422, detail="Decision must be APPROVE or REJECT")
 
-        # Verification step
-        verifier = VerificationAgent()
-        verification_record = await verifier.verify_action({
-            "id": passport.id,
-            "action_name": passport.action_name
-        })
-        passport.status = "VERIFIED"
-        passport.verified_at = datetime.now(timezone.utc)
-        passport.verification_record = verification_record
-
-        # Close related open risks for this commitment/mission so recovery completes the loop.
-        risk_stmt = select(Risk).where(
-            Risk.user_id == current_user.id,
-            Risk.is_resolved.is_(False),
+    decided_at = datetime.now(timezone.utc)
+    next_status = "APPROVED" if payload.decision == "APPROVE" else "REJECTED"
+    decision_record = {
+        "status": "APPROVED_NOT_EXECUTED" if payload.decision == "APPROVE" else "REJECTED",
+        "approved_by_user_id": current_user.id,
+        "decided_at": decided_at.isoformat(),
+        "notes": payload.notes,
+        "message": (
+            "Approval was recorded. No external action was executed because no handler is connected."
+            if payload.decision == "APPROVE"
+            else "The proposed action was rejected. No external action was executed."
+        ),
+    }
+    result = await db.execute(
+        update(ActionPassport)
+        .where(
+            ActionPassport.id == id,
+            ActionPassport.user_id == current_user.id,
+            ActionPassport.status == "PENDING_APPROVAL",
         )
-        if passport.commitment_id:
-            risk_stmt = risk_stmt.where(Risk.commitment_id == passport.commitment_id)
-        elif passport.mission_id:
-            risk_stmt = risk_stmt.where(Risk.mission_id == passport.mission_id)
-        related_risks = (await db.execute(risk_stmt)).scalars().all()
-        for risk in related_risks:
-            risk.is_resolved = True
-            risk.resolution_notes = (
-                f"Resolved after approved recovery: {passport.action_name}"
-            )
-
-        await event_bus.publish("action.completed", {
-            "passport_id": passport.id,
-            "action": passport.action_name,
-            "verification": verification_record,
-            "user_id": current_user.id,
-        })
-        for risk in related_risks:
-            await event_bus.publish("risk.resolved", {
-                "risk_id": risk.id,
-                "title": risk.title,
-                "user_id": current_user.id,
-            })
-    else:
-        passport.status = "REJECTED"
+        .values(status=next_status, execution_result=decision_record)
+    )
+    if result.rowcount != 1:
+        raise HTTPException(status_code=409, detail="This approval request has already been decided")
 
     await db.commit()
     await db.refresh(passport)
+    await event_bus.publish(
+        "action.approved" if payload.decision == "APPROVE" else "action.rejected",
+        {"passport_id": passport.id, "user_id": current_user.id},
+    )
     return passport
 

@@ -52,8 +52,8 @@ export default function RisksPage() {
         setIsPassportOpen(true);
       }
       toast({
-        title: "Recovery initiated",
-        description: "Action Passport ready for your approval.",
+        title: "Proposal created",
+        description: "An action proposal was saved for review. No external action was run.",
       });
     },
     onError: () =>
@@ -72,9 +72,9 @@ export default function RisksPage() {
   return (
     <div className="space-y-7 animate-fade-in">
       <PageHeader
-        eyebrow="Continuity protection"
+        eyebrow="Saved risk records"
         title="Risk center"
-        description="Understand what could slip, why it matters and which recovery paths are available."
+        description="Review saved risk records and create a proposal for a decision. Proposals do not run external actions."
         icon={<ShieldAlert className="h-5 w-5" />}
         meta={
           <>
@@ -110,7 +110,7 @@ export default function RisksPage() {
           value={active.reduce((sum, risk) => sum + risk.recovery_strategies.length, 0)}
           icon={ArrowRight}
           tone="info"
-          hint="Prepared by the engine"
+          hint="Suggestions available for review"
         />
       </div>
 
@@ -119,8 +119,8 @@ export default function RisksPage() {
       ) : active.length === 0 ? (
         <EmptyState
           icon={ShieldAlert}
-          title="No active risks"
-          description="CONVIA will surface a risk here when a deadline, dependency or constraint needs attention."
+          title="No saved risk records"
+          description="Risk and recovery records are not inferred automatically from dependencies or constraints."
         />
       ) : (
         <div className="space-y-4">
@@ -145,14 +145,7 @@ export default function RisksPage() {
               />
               <CardBody>
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                      Risk score
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold text-ink">
-                      {Math.round(risk.score * 100)}%
-                    </p>
-                  </div>
+                  <p className="max-w-xl text-sm text-ink-secondary">Review signal from saved commitment details</p>
                   <Button variant="secondary" size="sm" onClick={() => openRecovery(risk)}>
                     Explore recovery
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -195,7 +188,7 @@ export default function RisksPage() {
                   recoveryMutation.mutate({ riskId: selectedRisk.id, optionId: opt.id })
                 }
                 disabled={recoveryMutation.isPending}
-                className="w-full rounded-xl border border-line-subtle bg-surface-muted p-4 text-left transition-colors hover:border-brand hover:bg-brand-pale disabled:opacity-60"
+                className="w-full rounded-xl border border-line-subtle bg-surface-muted p-4 text-left transition-colors hover:border-brand hover:bg-brand-pale disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[13.5px] font-semibold text-ink">{opt.title}</span>

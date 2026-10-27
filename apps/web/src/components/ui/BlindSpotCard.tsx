@@ -20,7 +20,7 @@ export interface BlindSpotCardProps {
   items: BlindSpotItem[];
   className?: string;
   emptyLabel?: string;
-  /** Tones follow the source of the blind spot: waiting people / closing windows. */
+  /** Tones follow the saved review signal. */
   tone?: "warning" | "danger";
   icon?: LucideIcon;
   title?: string;
@@ -29,18 +29,18 @@ export interface BlindSpotCardProps {
 }
 
 /**
- * Warning-focused card for the blind spot scan.
+ * Warning-focused card for the saved review signals.
  * Informative rather than alarming: pale surfaces, precise language.
  */
 export const BlindSpotCard: React.FC<BlindSpotCardProps> = ({
   total,
   items,
   className,
-  emptyLabel = "No blind spots detected right now.",
+  emptyLabel = "No pending confirmations, saved high risk labels or deadlines within 48 hours were found.",
   tone = "warning",
   icon: HeaderIcon,
-  title = "Blind spot scan",
-  subtitle = "Things you may not be noticing",
+  title = "Saved review signals",
+  subtitle = "Pending confirmations, saved risk labels and upcoming deadlines",
   footer,
 }) => {
   const isDanger = tone === "danger";
@@ -79,7 +79,7 @@ export const BlindSpotCard: React.FC<BlindSpotCardProps> = ({
                     <HeaderIcon
                       className={cn(
                         "mt-0.5 h-3.5 w-3.5 shrink-0",
-                        isDanger ? "text-danger" : "text-[#B87A0E]"
+                        isDanger ? "text-danger" : "text-warning"
                       )}
                       strokeWidth={2}
                     />
@@ -87,7 +87,7 @@ export const BlindSpotCard: React.FC<BlindSpotCardProps> = ({
                     <XCircle
                       className={cn(
                         "mt-0.5 h-3.5 w-3.5 shrink-0",
-                        isDanger ? "text-danger" : "text-[#B87A0E]"
+                        isDanger ? "text-danger" : "text-warning"
                       )}
                       strokeWidth={2}
                     />
@@ -103,7 +103,7 @@ export const BlindSpotCard: React.FC<BlindSpotCardProps> = ({
                       <p
                         className={cn(
                           "mt-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]",
-                          isDanger ? "text-danger" : "text-[#B87A0E]"
+                          isDanger ? "text-danger" : "text-warning"
                         )}
                       >
                         {item.meta}

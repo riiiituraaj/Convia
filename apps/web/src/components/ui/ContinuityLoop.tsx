@@ -7,7 +7,7 @@ import {
   Brain,
   Compass,
   ListChecks,
-  Sparkles,
+  Search,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,47 +17,47 @@ interface Stage {
   label: string;
   description: string;
   icon: React.ElementType;
-  /** The "Act" stage carries the pale-green highlight. */
+  /** Highlights the review stage. */
   highlight?: boolean;
 }
 
 const STAGES: Stage[] = [
   {
-    key: "intent",
-    label: "Intent",
-    description: "You speak or type what matters.",
+    key: "capture",
+    label: "Capture",
+    description: "Write an objective or a clearly stated commitment.",
     icon: Compass,
   },
   {
-    key: "understand",
-    label: "Understand",
-    description: "Context, people and constraints are read.",
+    key: "context",
+    label: "Context",
+    description: "Optional model extraction; missing facts remain unfilled.",
     icon: Brain,
   },
   {
-    key: "plan",
-    label: "Plan",
-    description: "Outcomes become ordered, realistic steps.",
+    key: "structure",
+    label: "Structure",
+    description: "Phrase groups become mission nodes; dependencies are not inferred.",
     icon: ListChecks,
   },
   {
-    key: "act",
-    label: "Act",
-    description: "Work happens with your approval.",
-    icon: Zap,
+    key: "research",
+    label: "Research",
+    description: "Tavily search runs when configured and relevant.",
+    icon: Search,
+  },
+  {
+    key: "review",
+    label: "Review",
+    description: "Confirm captured commitments and inspect deadline signals.",
+    icon: BadgeCheck,
     highlight: true,
   },
   {
-    key: "verify",
-    label: "Verify",
-    description: "Evidence confirms the loop really closed.",
-    icon: BadgeCheck,
-  },
-  {
-    key: "adapt",
-    label: "Adapt",
-    description: "CONVIA learns and protects the next loop.",
-    icon: Sparkles,
+    key: "decide",
+    label: "Decide",
+    description: "Approval records a decision; external actions are not connected.",
+    icon: Zap,
   },
 ];
 
@@ -68,8 +68,7 @@ export interface ContinuityLoopProps {
 }
 
 /**
- * The Continuity Loop — CONVIA's signature component.
- * Intent → Understand → Plan → Act → Verify → Adapt, with a return path.
+ * A compact view of the currently supported capture and review flow.
  */
 export const ContinuityLoop: React.FC<ContinuityLoopProps> = ({ className, compact = false }) => (
   <div className={cn("space-y-5", className)}>
@@ -122,7 +121,7 @@ export const ContinuityLoop: React.FC<ContinuityLoopProps> = ({ className, compa
       })}
     </div>
 
-    {/* Return path that closes the loop */}
+    {/* Saved records provide continuity between sessions. */}
     <div className="relative hidden lg:block">
       <svg viewBox="0 0 1000 42" preserveAspectRatio="none" className="h-10 w-full">
         <defs>
@@ -143,7 +142,7 @@ export const ContinuityLoop: React.FC<ContinuityLoopProps> = ({ className, compa
         <circle cx="12" cy="34" r="3" fill="#25A866" fillOpacity="0.5" />
       </svg>
       <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line bg-surface px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Continuous loop
+        Saved records
       </span>
     </div>
   </div>

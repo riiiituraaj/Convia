@@ -16,7 +16,7 @@ export interface HeroSectionProps {
   /** Contextual message rendered on the right of the hero. */
   quote: { text: string; source?: string };
   onOpenCommand: () => void;
-  /** Status chip content, usually the continuity watcher. */
+  /** Optional status chip content. */
   status?: React.ReactNode;
   actions?: React.ReactNode;
   /** Extra metadata line under the profile chip, e.g. autonomy level. */
@@ -62,7 +62,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <Avatar name={name} size="sm" className="bg-white/90 text-brand-deep" />
           <div className="leading-tight">
             <div className="text-[12px] font-semibold text-white">{name}</div>
-            {meta ? <div className="text-[11px] text-white/60">{meta}</div> : null}
+            {meta ? <div className="text-[12px] text-white">{meta}</div> : null}
           </div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     {/* Greeting + contextual quote */}
     <div className="grid gap-7 lg:grid-cols-[1.7fr_1fr] lg:items-end">
       <div>
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+        <p className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-white">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-accent animate-pulse-soft" />
           {eyebrow}
         </p>
@@ -81,10 +81,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <h1 className="mt-3 text-[34px] font-semibold leading-[1.05] tracking-tight text-white sm:text-[42px] lg:text-[48px]">
           {greeting},
           <br />
-          <span className="text-brand-light">{name}.</span>
+          <span className="text-white">{name}.</span>
         </h1>
 
-        <p className="mt-3.5 max-w-xl text-[14px] leading-relaxed text-white/72 sm:text-[15px]">
+        <p className="mt-3.5 max-w-xl text-[14px] leading-relaxed text-white sm:text-[15px]">
           {description}
         </p>
 
@@ -93,11 +93,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       <figure className="convia-on-brand-control rounded-xl p-4 sm:p-5">
         <Quote className="h-4 w-4 text-brand-light/80" strokeWidth={1.9} />
-        <blockquote className="mt-2.5 text-[13.5px] leading-relaxed text-white/88">
+        <blockquote className="mt-2.5 text-[14px] leading-relaxed text-white">
           {quote.text}
         </blockquote>
         {quote.source ? (
-          <figcaption className="mt-3 text-[11px] font-medium uppercase tracking-[0.12em] text-white/55">
+          <figcaption className="mt-3 text-[12px] font-medium uppercase tracking-[0.12em] text-white">
             {quote.source}
           </figcaption>
         ) : null}

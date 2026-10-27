@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s · CONVIA",
   },
   description:
-    "CONVIA is a personal continuity engine: it watches your commitments, protects what matters and closes important loops before they slip.",
+    "CONVIA helps you capture objectives and commitments, keep their history, and review saved deadlines and proposals.",
   applicationName: "CONVIA",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#123F30",
+  themeColor: "#edf3f8",
   width: "device-width",
   initialScale: 1,
 };
@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("convia_theme");if(t==="dark"||(t!== "light"&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("convia_theme");document.documentElement.classList.toggle("dark",t==="dark");}catch(e){document.documentElement.classList.remove("dark");}})();`,
           }}
         />
       </head>

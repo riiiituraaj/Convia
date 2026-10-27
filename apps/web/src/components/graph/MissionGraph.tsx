@@ -176,7 +176,7 @@ export const MissionGraph: React.FC<MissionGraphProps> = ({ nodes, edges, onSele
           {/* Legend is a Panel so it can never overlap the zoom controls */}
           <Panel
             position="top-left"
-            className="flex flex-wrap items-center gap-3 rounded-[10px] border border-line bg-surface/95 px-3 py-1.5 text-[11px] text-ink-secondary backdrop-blur-sm"
+            className="flex flex-wrap items-center gap-3 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-[12px] text-ink-secondary"
           >
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-brand-accent" /> Completed
@@ -193,7 +193,7 @@ export const MissionGraph: React.FC<MissionGraphProps> = ({ nodes, edges, onSele
         <div className="flex h-full flex-col items-center justify-center gap-1 px-6 text-center">
           <p className="text-[13px] font-semibold text-ink">No dependency nodes yet</p>
           <p className="max-w-sm text-[12px] leading-relaxed text-ink-secondary">
-            The graph appears here once the planning agent decomposes this mission.
+            Intent capture may group objective phrases into nodes. Dependencies are not inferred.
           </p>
         </div>
       )}

@@ -56,7 +56,7 @@ export const Logo: React.FC<LogoProps> = ({
         <span
           className={cn(
             "hidden text-[12px] font-medium sm:inline",
-            variant === "light" ? "text-white/70" : "text-ink-muted"
+            variant === "light" ? "text-white" : "text-ink-muted"
           )}
         >
           Never lose the thread.

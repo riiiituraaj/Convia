@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { clearSession, getToken } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
@@ -16,49 +17,70 @@ export function useActivityStream(): void {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    let source: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
+    let controller: AbortController | null = null;
 
-    const connect = () => {
+    const connect = async () => {
       if (disposed) return;
+      const token = getToken();
+      if (!token) return;
+      controller = new AbortController();
       try {
-        source = new EventSource(`${API_BASE}/activity/stream`);
-      } catch {
-        scheduleRetry();
-        return;
-      }
-
-      source.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as { type?: string; payload?: unknown };
-          invalidateForEvent(queryClient, data.type, data.payload);
-        } catch {
-          // Malformed event — ignore.
+        const response = await fetch(`${API_BASE}/activity/stream`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (response.status === 401) {
+          clearSession();
+          window.location.assign("/login");
+          return;
         }
-      };
-
-      source.onerror = () => {
-        source?.close();
-        source = null;
-        scheduleRetry();
-      };
+        if (!response.ok || !response.body) throw new Error(`Activity stream returned ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (!disposed) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const messages = buffer.split("\n\n");
+          buffer = messages.pop() || "";
+          for (const message of messages) {
+            const dataLine = message.split("\n").find((line) => line.startsWith("data:"));
+            if (!dataLine) continue;
+            try {
+              const data = JSON.parse(dataLine.slice(5).trim()) as { type?: string; payload?: unknown };
+              invalidateForEvent(queryClient, data.type, data.payload);
+            } catch {
+              // Ignore malformed events and keep the authenticated stream open.
+            }
+          }
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (!disposed) scheduleRetry();
+      } finally {
+        controller = null;
+      }
+      if (!disposed) scheduleRetry();
     };
 
     const scheduleRetry = () => {
       if (disposed || retryTimer) return;
       retryTimer = setTimeout(() => {
         retryTimer = null;
-        connect();
+        void connect();
       }, 5000);
     };
 
-    connect();
+    void connect();
 
     return () => {
       disposed = true;
       if (retryTimer) clearTimeout(retryTimer);
-      source?.close();
+      controller?.abort();
     };
   }, [queryClient]);
 }
@@ -89,7 +111,6 @@ function invalidateForEvent(
     queryClient.invalidateQueries({ queryKey: ["memory"] });
     queryClient.invalidateQueries({ queryKey: ["memories"] });
   } else {
-    // Unknown event type — refresh everything lightweight.
     queryClient.invalidateQueries();
   }
 }

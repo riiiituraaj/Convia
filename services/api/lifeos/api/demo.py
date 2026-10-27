@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from lifeos.core.database import get_db
 from lifeos.api.deps import get_current_user
 from lifeos.models.user import User
@@ -11,6 +11,8 @@ from lifeos.models.commitment import Commitment, CommitmentEvent
 from lifeos.models.risk import Risk
 from lifeos.models.action import ActionPassport
 from lifeos.models.agent import AgentRun
+from lifeos.models.memory import Memory
+from lifeos.models.conversation import Conversation
 from lifeos.core.event_bus import event_bus
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -22,22 +24,16 @@ async def seed_flagship_demo(
     db: AsyncSession = Depends(get_db)
 ):
     """Initializes the deterministic flagship demo: 'Move to Bangalore'."""
-    # 1. Clear existing user data for a clean demonstration
-    await db.execute(delete(ActionPassport).where(ActionPassport.user_id == current_user.id))
-    await db.execute(delete(Risk).where(Risk.user_id == current_user.id))
-    await db.execute(delete(CommitmentEvent).where(CommitmentEvent.commitment_id.in_(
-        select(Commitment.id).where(Commitment.user_id == current_user.id)
-    )))
-    await db.execute(delete(Commitment).where(Commitment.user_id == current_user.id))
-    await db.execute(delete(MissionEdge).where(MissionEdge.mission_id.in_(
-        select(Mission.id).where(Mission.user_id == current_user.id)
-    )))
-    await db.execute(delete(MissionNode).where(MissionNode.mission_id.in_(
-        select(Mission.id).where(Mission.user_id == current_user.id)
-    )))
-    await db.execute(delete(Mission).where(Mission.user_id == current_user.id))
-    await db.execute(delete(AgentRun).where(AgentRun.user_id == current_user.id))
-    await db.commit()
+    # Demo data must never delete or replace someone's real continuity records.
+    existing_rows = []
+    for model in (Mission, Commitment, Risk, ActionPassport, AgentRun, Memory, Conversation):
+        result = await db.execute(select(model.id).where(model.user_id == current_user.id).limit(1))
+        existing_rows.append(result.first())
+    if any(existing_rows):
+        raise HTTPException(
+            status_code=409,
+            detail="The demo can only be loaded into an empty account. Your existing data was left untouched.",
+        )
 
     now = datetime.now(timezone.utc)
 
@@ -45,7 +41,7 @@ async def seed_flagship_demo(
     mission = Mission(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
-        title="Move to Bangalore & Start Internship",
+        title="DEMO · Move to Bangalore & Start Internship",
         description="Relocate smoothly to Bangalore under ₹80,000 budget and start internship without missing any commitments.",
         desired_outcome="Settle into HSR Layout coliving, arrive on schedule, and fulfill immediate API delivery commitment.",
         status="ACTIVE",
@@ -55,6 +51,7 @@ async def seed_flagship_demo(
         budget_limit=80000.0,
         budget_currency="INR",
         constraints={
+            "demo_seed": True,
             "budget_limit": 80000.0,
             "days_remaining": 21,
             "office_location": "HSR Layout Sector 2, Bangalore"
@@ -241,8 +238,8 @@ async def seed_flagship_demo(
         user_id=current_user.id,
         mission_id=mission.id,
         commitment_id=c_travel.id,
-        title="Flight Cost Surged to ₹12,500 (Budget Ceiling Risk)",
-        description="Ticket price to Kempegowda Airport jumped by +₹4,500. This compresses the available reserve for HSR housing deposit from ₹30,000 down to ₹25,500, risking a budget overrun.",
+        title="DEMO SCENARIO — Flight Cost Surged to ₹12,500 (Budget Ceiling Risk)",
+        description="Demonstration-only scenario data. No live fare or housing lookup was performed.",
         severity="HIGH",
         score=0.82,
         evidence=[
@@ -282,7 +279,7 @@ async def seed_flagship_demo(
         user_id=current_user.id,
         mission_id=mission.id,
         commitment_id=c_travel.id,
-        action_name="Book 05:45 AM Flight (6E-204) & Protect Housing Reserve",
+        action_name="DEMO · Book 05:45 AM Flight (6E-204) & Protect Housing Reserve",
         why="Mitigate travel cost surge and enforce the strict ₹80,000 budget limit.",
         evidence=[
             "Morning flight 6E-204 available at ₹8,400",
@@ -309,48 +306,48 @@ async def seed_flagship_demo(
             id=str(uuid.uuid4()),
             user_id=current_user.id,
             agent_type="ORCHESTRATOR",
-            task_description="Orchestrating Bangalore relocation and team delivery",
-            status="COMPLETED",
-            model_used="nvidia/nemotron-4-340b-instruct",
-            latency_ms=142.0,
-            events=[{"step": "Context mapped"}, {"step": "DAG constructed"}],
-            output_payload={"mission_id": mission.id},
+            task_description="DEMO DATA — simulated continuity pipeline",
+            status="DEMO",
+            model_used="demo-fixture",
+            latency_ms=0.0,
+            events=[{"step": "Demo fixture loaded"}, {"step": "No provider call was made"}],
+            output_payload={"mission_id": mission.id, "demo": True},
             completed_at=now,
         ),
         AgentRun(
             id=str(uuid.uuid4()),
             user_id=current_user.id,
             agent_type="RESEARCH",
-            task_description="Querying Tavily for verified Bangalore coliving and flights",
-            status="COMPLETED",
-            model_used="tavily_search + nemotron-mini-4b",
-            latency_ms=310.0,
-            events=[{"step": "Tavily queried"}, {"step": "Evidence validated"}],
-            output_payload={"sources": 3},
+            task_description="DEMO DATA — simulated research summary; no provider was called",
+            status="DEMO",
+            model_used="demo-fixture",
+            latency_ms=0.0,
+            events=[{"step": "Demo-only simulated research"}, {"step": "No sources were retrieved"}],
+            output_payload={"sources": 0, "demo": True},
             completed_at=now,
         ),
         AgentRun(
             id=str(uuid.uuid4()),
             user_id=current_user.id,
             agent_type="RISK",
-            task_description="Calculating budget headroom & schedule collisions",
-            status="COMPLETED",
-            model_used="nvidia/nemotron-4-340b-instruct",
-            latency_ms=89.0,
-            events=[{"step": "Surge detected"}, {"step": "Recovery options prepared"}],
-            output_payload={"risk_id": demo_risk.id},
+            task_description="DEMO DATA — simulated risk scenario",
+            status="DEMO",
+            model_used="demo-fixture",
+            latency_ms=0.0,
+            events=[{"step": "Demo-only risk scenario loaded"}, {"step": "No live price check was made"}],
+            output_payload={"risk_id": demo_risk.id, "demo": True},
             completed_at=now,
         ),
         AgentRun(
             id=str(uuid.uuid4()),
             user_id=current_user.id,
             agent_type="VERIFICATION",
-            task_description="Validating receipt confirmation for booked transit",
-            status="COMPLETED",
-            model_used="nvidia/nemotron-mini-4b-instruct",
-            latency_ms=45.0,
-            events=[{"step": "PNR verified"}, {"step": "Budget updated"}],
-            output_payload={},
+            task_description="DEMO DATA — simulated verification; no action was executed",
+            status="DEMO",
+            model_used="demo-fixture",
+            latency_ms=0.0,
+            events=[{"step": "Demo-only verification display"}, {"step": "No action was executed or verified"}],
+            output_payload={"demo": True, "verified": False},
             completed_at=now,
         ),
     ]

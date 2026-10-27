@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from datetime import datetime
 
 
@@ -34,5 +34,5 @@ class ActionPassportResponse(ActionPassportBase):
 
 
 class ActionDecisionRequest(BaseModel):
-    decision: str # APPROVE or REJECT
-    notes: Optional[str] = None
+    decision: Literal["APPROVE", "REJECT"]
+    notes: Optional[str] = Field(default=None, max_length=2000)

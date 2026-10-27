@@ -31,32 +31,32 @@ export const TONES: Record<Tone, ToneStyle> = {
     hex: "#25A866",
   },
   success: {
-    badge: "bg-brand-pale text-brand-mid border-brand-light",
-    dot: "bg-brand-accent",
-    soft: "bg-brand-pale border-brand-light",
-    text: "text-brand-accent",
-    hex: "#25A866",
+    badge: "bg-success-light text-success border-success-light",
+    dot: "bg-success",
+    soft: "bg-success-light border-success-light",
+    text: "text-success",
+    hex: "#287747",
   },
   danger: {
     badge: "bg-danger-light text-danger border-[#F8D4D4]",
     dot: "bg-danger",
     soft: "bg-danger-light border-[#F8D4D4]",
     text: "text-danger",
-    hex: "#F04444",
+    hex: "#C62828",
   },
   warning: {
-    badge: "bg-warning-light text-[#8A5A00] border-[#F7E2B8]",
+    badge: "bg-warning-light text-warning border-[#F7E2B8]",
     dot: "bg-warning",
     soft: "bg-warning-light border-[#F7E2B8]",
-    text: "text-[#B87A0E]",
-    hex: "#F5A623",
+    text: "text-warning",
+    hex: "#8A5A00",
   },
   info: {
     badge: "bg-info-light text-info border-[#CFE3FF]",
     dot: "bg-info",
     soft: "bg-info-light border-[#CFE3FF]",
     text: "text-info",
-    hex: "#1677E8",
+    hex: "#0B5CAD",
   },
   neutral: {
     badge: "bg-surface-sunken text-ink-secondary border-line",
@@ -244,60 +244,6 @@ export function formatDateTime(iso: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-export interface ContinuityScore {
-  /** 0 - 100 */
-  score: number;
-  band: Tone;
-  interpretation: string;
-  completed: number;
-  atRisk: number;
-  active: number;
-  total: number;
-}
-
-/**
- * Continuity Score: a transparent, deterministic summary of commitment health.
- * It is derived entirely from the commitments the backend already returns.
- */
-export function continuityScore(commitments: Commitment[]): ContinuityScore {
-  const total = commitments.length;
-  const completed = commitments.filter((c) => isClosed(c.status)).length;
-  const atRisk = commitments.filter(
-    (c) => c.status === "AT_RISK" || c.risk_level === "CRITICAL" || c.risk_level === "HIGH"
-  ).length;
-
-  if (total === 0) {
-    return {
-      score: 100,
-      band: "success",
-      interpretation: "Nothing is at risk right now.",
-      completed: 0,
-      atRisk: 0,
-      active: 0,
-      total: 0,
-    };
-  }
-
-  const completedRatio = completed / total;
-  const raw = 58 + completedRatio * 42 - Math.min(atRisk, 8) * 4.5;
-  const score = Math.round(Math.min(100, Math.max(5, raw)));
-
-  let band: Tone = "success";
-  let interpretation = "Everything important is protected.";
-  if (score < 60) {
-    band = "danger";
-    interpretation = "Several threads need attention today.";
-  } else if (score < 78) {
-    band = "warning";
-    interpretation = "Stable, but a few loops are still open.";
-  } else if (score < 90) {
-    band = "brand";
-    interpretation = "Good — your loops are closing.";
-  }
-
-  return { score, band, interpretation, completed, atRisk, active: total - completed, total };
 }
 
 /** Nearest deadlines first; commitments without a deadline last. */

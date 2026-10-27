@@ -72,7 +72,7 @@ export const UpcomingCommitments: React.FC<UpcomingCommitmentsProps> = ({
                 className="flex items-start gap-3.5 px-5 py-3.5 transition-colors duration-150 ease-out hover:bg-surface-muted sm:px-6"
               >
                 <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-[10px] border border-line bg-surface-muted leading-none">
-                  <span className="text-[9.5px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
                     {chip.month}
                   </span>
                   <span className="text-[15px] font-semibold text-ink">{chip.day}</span>

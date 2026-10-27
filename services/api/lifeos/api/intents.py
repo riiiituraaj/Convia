@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
@@ -13,6 +13,7 @@ from lifeos.models.agent import AgentRun
 from lifeos.models.risk import Risk
 from lifeos.models.action import ActionPassport
 from lifeos.models.memory import Memory
+from lifeos.models.conversation import Conversation, Message
 from lifeos.schemas.intent import IntentParseRequest, IntentParseResponse, BlindSpotsResponse, ResolveDayResponse
 from lifeos.agents.orchestrator import orchestrator
 from lifeos.engines.recovery_engine import BlindSpotsEngine, ResolveDayEngine
@@ -29,7 +30,7 @@ async def _record_agent_run(
     latency_ms: float,
     events: list,
     output_payload: Optional[dict] = None,
-    model_used: str = "nvidia/nemotron-4-340b-instruct",
+    model_used: str = "local-deterministic",
 ) -> None:
     run = AgentRun(
         user_id=user_id,
@@ -178,7 +179,7 @@ async def _persist_mission_and_commitments(
             deadline=item.get("deadline") or _parse_deadline_text(item.get("deadline_text")),
             priority=str(item.get("priority") or "MEDIUM"),
             status=status,
-            confidence=float(item.get("confidence") or 0.95),
+            confidence=item.get("confidence"),
             dependencies=item.get("dependencies") or [],
             consequences=item.get("consequences"),
             evidence=item.get("evidence"),
@@ -301,7 +302,38 @@ async def parse_intent(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Runs intent through the multi-agent pipeline, persists commitments, and returns them."""
+    """Capture an objective, persist its conversation messages, and return saved records."""
+    if payload.conversation_id:
+        conversation_result = await db.execute(
+            select(Conversation).where(
+                Conversation.id == payload.conversation_id,
+                Conversation.user_id == current_user.id,
+            )
+        )
+        conversation = conversation_result.scalars().first()
+        if conversation is None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+    else:
+        first_line = next((line.strip() for line in payload.raw_text.splitlines() if line.strip()), "")
+        conversation = Conversation(
+            user_id=current_user.id,
+            title=first_line[:255] or "New conversation",
+        )
+        db.add(conversation)
+        await db.flush()
+
+    db.add(
+        Message(
+            conversation_id=conversation.id,
+            role="USER",
+            content=payload.raw_text,
+            source=payload.source,
+            status="COMPLETED",
+        )
+    )
+    conversation.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
     started = time.perf_counter()
     state = await orchestrator.run(user_id=current_user.id, raw_intent=payload.raw_text)
     latency_ms = (time.perf_counter() - started) * 1000.0
@@ -370,25 +402,24 @@ async def parse_intent(
             "autonomy_level": c.autonomy_level,
             "deadline": c.deadline,
             "mission_id": c.mission_id,
-            "suggested_for_confirmation": False,
+            "suggested_for_confirmation": c.status == "PENDING_CONFIRMATION",
         })
 
-    model_used = (
-        state.run_logs[0].get("model", "nvidia/nemotron-4-340b-instruct")
-        if state.run_logs
-        else "nvidia/nemotron-4-340b-instruct"
+    model_used = next(
+        (entry.get("model_used") for entry in state.run_logs if entry.get("model_used")),
+        "local-deterministic",
     )
 
     run_events = [
         {"step": "Intent received", "chars": len(payload.raw_text)},
         {"step": "Context & commitments extracted", "commitments": len(candidate_commitments)},
         {
-            "step": "Mission DAG mapped",
+            "step": "Mission phrase groups saved",
             "mission": mission.title if mission else None,
         },
         {"step": "Persisted to continuity store", "mission_id": mission.id if mission else None},
         {"step": "Risks persisted", "risks": len(saved_risks)},
-        {"step": "Action passports prepared", "passports": len(saved_passports)},
+        {"step": "Action proposals persisted", "passports": len(saved_passports)},
         {"step": "Risk & critic pass complete"},
         {"step": "Pipeline finished"},
     ]
@@ -397,7 +428,7 @@ async def parse_intent(
         await _record_agent_run(
             db=db,
             user_id=current_user.id,
-            task_description=f"Parse intent: {payload.raw_text[:120]}",
+            task_description=f"Parse intent ({len(payload.raw_text)} characters)",
             status="COMPLETED",
             latency_ms=latency_ms,
             events=run_events,
@@ -441,8 +472,8 @@ async def parse_intent(
 
     mission_title = mission.title if mission else "your objective"
     summary = (
-        f"CONVIA captured your intent. We identified {len(candidate_commitments)} commitments "
-        f"and mapped the dependency structure for '{mission_title}'."
+        f"CONVIA captured your intent. It saved {len(candidate_commitments)} commitment(s) "
+        f"and created a mission record for '{mission_title}'. Planned dependencies were not inferred."
     )
     if saved_risks:
         summary += f" {len(saved_risks)} risk signal(s) are now tracked with recovery options."
@@ -473,19 +504,41 @@ async def parse_intent(
     if any("tonight" in (c.action or "").lower() for c in saved):
         signals.append("Immediate delivery deadline tonight detected")
     else:
-        signals.append("Commitments captured with deadlines and consequences preserved")
+        signals.append("Commitments captured for your review; missing details are left unfilled")
     if saved_risks:
         signals.append(f"{len(saved_risks)} risk signal(s) with recovery strategies ready")
     if saved_passports:
         signals.append(f"{len(saved_passports)} action passport(s) pending your approval")
 
+    if conversation.title == "New conversation":
+        first_line = next((line.strip() for line in payload.raw_text.splitlines() if line.strip()), "")
+        conversation.title = first_line[:255] or "New conversation"
+    conversation.updated_at = datetime.now(timezone.utc)
+    db.add(
+        Message(
+            conversation_id=conversation.id,
+            role="ASSISTANT",
+            content=summary,
+            source="intent_capture",
+            status="COMPLETED",
+            metadata_json={
+                "model_used": model_used,
+                "mission_id": mission.id if mission else None,
+                "commitment_count": len(candidate_commitments),
+                "risk_count": len(saved_risks),
+            },
+        )
+    )
+    await db.commit()
+
     return IntentParseResponse(
+        conversation_id=conversation.id,
         recognized_intent="MISSION_AND_COMMITMENT_EXTRACTION",
         extracted_mission=extracted_mission, # type: ignore
         commitments=candidate_commitments, # type: ignore
         signals_detected=signals,
         summary_message=summary,
-        confidence=0.97,
+        confidence=None,
         model_used=model_used
     )
 

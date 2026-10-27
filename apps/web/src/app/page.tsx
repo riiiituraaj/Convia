@@ -19,37 +19,37 @@ const FEATURES = [
     icon: Target,
     title: "Commitment-first",
     description:
-      "Every promise becomes a tracked commitment with deadline, recipient, risk score, and recovery path.",
+      "Capture an obligation, keep its context and deadline visible, and follow its status over time.",
   },
   {
     icon: Shield,
     title: "Human approval layer",
     description:
-      "CONVIA never acts without you. Meaningful actions create Action Passports for review.",
+      "Review proposed actions before they move forward. Approval is recorded separately from execution.",
   },
   {
     icon: Bell,
-    title: "Blind spot detection",
+    title: "Deadline review signals",
     description:
-      "Automatically surfaces forgotten dependencies, expiring windows, and people waiting on you.",
+      "See saved commitments awaiting confirmation, user marked risks, and deadlines within 48 hours.",
   },
   {
     icon: Layers,
-    title: "Multi-agent orchestration",
+    title: "Capture and review",
     description:
-      "Context, planning, research, risk, and verification agents work together on every thread.",
+      "The parser extracts explicit commitments and groups objective phrases. It does not infer dependencies.",
   },
   {
     icon: Globe,
     title: "Honest integrations",
     description:
-      "Nothing shows as connected without credentials. Fallbacks are labeled, never faked.",
+      "Provider credentials, live connectivity, and unavailable integrations are reported as different states.",
   },
   {
     icon: Mic,
     title: "Voice-first",
     description:
-      "Speak naturally. Browser Web Speech listens today; Nemotron reasons and CONVIA tracks. NVIDIA Parakeet ASR/TTS Coming Soon.",
+      "Use browser speech recognition where supported. Server-side speech services still require provider configuration.",
   },
 ];
 
@@ -57,22 +57,22 @@ const STEPS = [
   {
     step: "01",
     title: "Capture",
-    description: "Tell CONVIA what you promised — by voice, text, or email intent.",
+    description: "Submit an objective or a commitment through the authenticated workspace.",
   },
   {
     step: "02",
     title: "Model",
-    description: "Commitments become a living graph with deadlines, risks, and dependencies.",
+    description: "The current parser captures commitments and a simple objective graph for review.",
   },
   {
     step: "03",
-    title: "Protect",
-    description: "Agents watch for drift, propose recovery, and surface blind spots.",
+    title: "Review",
+    description: "Inspect saved deadlines, confirmations and proposals in your account.",
   },
   {
     step: "04",
-    title: "Close",
-    description: "You approve actions. CONVIA executes, verifies, and closes the loop.",
+    title: "Decide",
+    description: "Approve or reject a proposal. The decision is recorded; external execution is not connected.",
   },
 ];
 
@@ -80,7 +80,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-canvas">
       {/* Nav */}
-      <header className="sticky top-0 z-40 border-b border-line/60 bg-canvas/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-line bg-canvas">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo height={28} showTagline />
           <nav className="flex items-center gap-3">
@@ -116,8 +116,7 @@ export default function LandingPage() {
               <span className="text-brand">the thread.</span>
             </h1>
             <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-ink-secondary sm:text-[17px]">
-              CONVIA watches your commitments, protects what matters, and closes
-              important loops before they slip. Built around a single primitive: the{" "}
+              CONVIA captures objectives and clearly stated commitments, then helps you review saved missions and deadlines. Built around a single primitive: the{" "}
               <strong className="font-semibold text-ink">Commitment</strong>.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -136,26 +135,9 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="mt-4 text-[13px] text-ink-muted">
-              No credit card · Works offline-first · Open source core
+              No credit card · Local deterministic capture · Open source core
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* Stats strip */}
-      <section className="border-y border-line bg-surface">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-8 sm:grid-cols-4 sm:px-6 lg:px-8">
-          {[
-            { value: "10", label: "continuity loop stages" },
-            { value: "9", label: "specialized agents" },
-            { value: "0", label: "actions without approval" },
-            { value: "∞", label: "threads never dropped" },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-[28px] font-semibold tracking-tight text-brand">{stat.value}</p>
-              <p className="mt-0.5 text-[12.5px] text-ink-secondary">{stat.label}</p>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -169,8 +151,8 @@ export default function LandingPage() {
             Continuity is the product.
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-secondary">
-            Most productivity tools track tasks. CONVIA tracks the promises behind
-            them — who you owe, what happens if you slip, and how to recover.
+            Save commitments with the context you provide, then review their status,
+            recipients and deadlines in one workspace.
           </p>
         </div>
 
@@ -203,7 +185,7 @@ export default function LandingPage() {
               How it works
             </p>
             <h2 className="mt-2 text-[28px] font-semibold tracking-tight text-ink sm:text-[32px]">
-              The continuity loop.
+              Capture, review, decide.
             </h2>
           </div>
 
@@ -237,12 +219,12 @@ export default function LandingPage() {
               {
                 icon: CheckCircle2,
                 title: "Never fake functionality",
-                description: "Unimplemented features show Coming Soon — not mock data.",
+                description: "Unavailable integrations are labeled; sample scenarios are clearly identified as demo data.",
               },
               {
                 icon: Users,
                 title: "Human in the loop",
-                description: "Action Passports gate every meaningful execution.",
+                description: "Proposals can be approved or rejected. The decision is recorded; no external action handler is connected.",
               },
               {
                 icon: Zap,
@@ -272,15 +254,14 @@ export default function LandingPage() {
             Ready to never drop the thread?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-[15px] text-ink-secondary">
-            Open the dashboard and load the flagship demo — a full relocation
-            scenario with commitments, risks, and recovery options.
+            Create an account, capture an objective, and inspect the records saved to your workspace.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/life"
               className="inline-flex h-11 items-center rounded-[10px] bg-brand px-6 text-[15px] font-medium text-white hover:bg-brand-deep transition-colors"
             >
-              Open CONVIA
+              Create an account
               <ArrowRight className="ml-2 h-4 w-4" strokeWidth={2} />
             </Link>
             <Link

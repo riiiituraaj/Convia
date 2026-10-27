@@ -14,7 +14,7 @@ export interface BottomCTAProps {
   className?: string;
 }
 
-/** Wide, subtle green banner used to close out long pages. */
+/** Wide, subtle brand banner used to close out long pages. */
 export const BottomCTA: React.FC<BottomCTAProps> = ({
   title,
   description,
@@ -31,7 +31,7 @@ export const BottomCTA: React.FC<BottomCTAProps> = ({
   >
     <div className="flex items-start gap-4">
       {icon ? (
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/70 bg-white/70 text-brand">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-brand">
           {icon}
         </span>
       ) : null}
@@ -47,7 +47,7 @@ export const BottomCTA: React.FC<BottomCTAProps> = ({
 
     <Link
       href={href}
-      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-medium text-white transition-colors duration-150 ease-out hover:bg-brand-deep"
+      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition-colors duration-150 ease-out hover:bg-brand-deep"
     >
       {actionLabel}
       <ArrowRight className="h-4 w-4" strokeWidth={1.9} />

@@ -57,7 +57,7 @@ export default function LoginPage() {
             <Logo height={32} />
           </Link>
           <p className="mt-2 text-sm text-ink-secondary">
-            Sign in to continue to your continuity engine.
+            Sign in to continue to your workspace.
           </p>
         </div>
 
@@ -141,13 +141,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-ink-muted">
-          Or{" "}
-          <Link href="/life" className="text-brand hover:text-brand-deep">
-            continue as guest
-          </Link>{" "}
-          — no account required.
-        </p>
       </div>
     </div>
   );

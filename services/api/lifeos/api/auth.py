@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
 from typing import Optional
 from lifeos.core.database import get_db
@@ -22,17 +23,22 @@ class UserSettingsUpdate(BaseModel):
 
 @router.post("/register", response_model=Token)
 async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == user_in.email))
+    email = str(user_in.email).lower()
+    result = await db.execute(select(User).where(User.email == email))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
     user = User(
-        email=user_in.email,
+        email=email,
         hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name
     )
     db.add(user)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="User with this email already exists") from None
     await db.refresh(user)
 
     token = create_access_token(user.id)
@@ -41,7 +47,7 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == credentials.email))
+    result = await db.execute(select(User).where(User.email == str(credentials.email).lower()))
     user = result.scalars().first()
     if not user or not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")

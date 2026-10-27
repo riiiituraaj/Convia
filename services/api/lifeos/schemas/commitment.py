@@ -10,7 +10,7 @@ class CommitmentBase(BaseModel):
     context: Optional[str] = None
     deadline: Optional[datetime] = None
     priority: str = "MEDIUM" # LOW, MEDIUM, HIGH, URGENT
-    confidence: float = 1.0
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
     dependencies: List[str] = Field(default_factory=list)
     consequences: Optional[str] = None
     evidence: Optional[str] = None

@@ -1,58 +1,82 @@
-version: '3.8'
-
 services:
   db:
-    image: pgvector/pgvector:pg16
-    container_name: convia-postgres
-    restart: always
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: convia
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    container_name: convia-redis
-    restart: always
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d convia"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   api:
     build:
       context: ./services/api
       dockerfile: Dockerfile
-    container_name: convia-api
-    restart: always
+    restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/convia
-      - REDIS_URL=redis://redis:6379/0
-      - NEBIUS_API_KEY=${NEBIUS_API_KEY}
-      - TAVILY_API_KEY=${TAVILY_API_KEY}
-      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
-      - AUTH_SECRET=${AUTH_SECRET}
+      APP_ENV: ${APP_ENV:-development}
+      LIFEOS_DEBUG: ${LIFEOS_DEBUG:-false}
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/convia
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000"]}'
+      AI_PROVIDER: ${AI_PROVIDER:-disabled}
+      AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-45}
+      AI_MAX_RETRIES: ${AI_MAX_RETRIES:-1}
+      NEBIUS_API_KEY: ${NEBIUS_API_KEY:-}
+      NEBIUS_BASE_URL: ${NEBIUS_BASE_URL:-https://api.tokenfactory.nebius.com/v1}
+      NEBIUS_NEMOTRON_MODEL: ${NEBIUS_NEMOTRON_MODEL:-}
+      NEBIUS_FAST_MODEL: ${NEBIUS_FAST_MODEL:-}
+      NEBIUS_REASONING_MODEL: ${NEBIUS_REASONING_MODEL:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_NIM_BASE_URL: ${NVIDIA_NIM_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      NVIDIA_NIM_MODEL: ${NVIDIA_NIM_MODEL:-}
+      NVIDIA_NIM_FAST_MODEL: ${NVIDIA_NIM_FAST_MODEL:-}
+      NVIDIA_NIM_REASONING_MODEL: ${NVIDIA_NIM_REASONING_MODEL:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      TAVILY_TIMEOUT_SECONDS: ${TAVILY_TIMEOUT_SECONDS:-20}
+      TAVILY_MAX_RESULTS: ${TAVILY_MAX_RESULTS:-5}
+      DOCUMENT_STORAGE_DIR: /app/local_data/documents
+      DOCUMENT_MAX_UPLOAD_BYTES: ${DOCUMENT_MAX_UPLOAD_BYTES:-15728640}
+      DOCUMENT_MAX_USER_BYTES: ${DOCUMENT_MAX_USER_BYTES:-262144000}
+      DOCUMENT_MAX_USER_FILES: ${DOCUMENT_MAX_USER_FILES:-100}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - documents_data:/app/local_data/documents
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
-    container_name: convia-web
-    restart: always
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:
-
+  documents_data:

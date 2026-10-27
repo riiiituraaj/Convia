@@ -12,8 +12,8 @@ interface PersonCardProps {
 }
 
 export const PersonCard: React.FC<PersonCardProps> = ({ person }) => {
-  const hasWaiting = person.waiting_on_user.length > 0;
-  const hasUserWaiting = person.user_waiting_on.length > 0;
+  const hasRecipientCommitment = person.waiting_on_user.length > 0;
+  const hasDependency = person.user_waiting_on.length > 0;
 
   return (
     <Card interactive className="p-5 sm:p-6 flex flex-col">
@@ -29,13 +29,13 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person }) => {
             </p>
           </div>
         </div>
-        {hasWaiting ? (
+        {hasRecipientCommitment ? (
           <Badge tone="warning" dot>
-            Waiting on you
+            Open commitment
           </Badge>
-        ) : hasUserWaiting ? (
+        ) : hasDependency ? (
           <Badge tone="info" dot>
-            You are waiting
+            Saved dependency
           </Badge>
         ) : (
           <Badge tone="success" dot>
@@ -44,10 +44,10 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person }) => {
         )}
       </div>
 
-      {hasWaiting && (
+      {hasRecipientCommitment && (
         <div className="mt-4 space-y-2">
           <p className="text-[11.5px] font-medium uppercase tracking-[0.08em] text-ink-muted">
-            They&apos;re waiting on you
+            Open commitments with this recipient
           </p>
           <ul className="space-y-1.5">
             {person.waiting_on_user.slice(0, 3).map((item, index) => (
@@ -71,10 +71,10 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person }) => {
         </div>
       )}
 
-      {hasUserWaiting && (
+      {hasDependency && (
         <div className="mt-4 space-y-2">
           <p className="text-[11.5px] font-medium uppercase tracking-[0.08em] text-ink-muted">
-            You&apos;re waiting on them
+            Saved dependencies on this person
           </p>
           <ul className="space-y-1.5">
             {person.user_waiting_on.slice(0, 3).map((item, index) => (
@@ -92,10 +92,10 @@ export const PersonCard: React.FC<PersonCardProps> = ({ person }) => {
         </div>
       )}
 
-      {!hasWaiting && !hasUserWaiting && (
+      {!hasRecipientCommitment && !hasDependency && (
         <div className="mt-4 flex items-center gap-2 text-[12.5px] text-ink-secondary">
           <CheckCircle2 className="h-3.5 w-3.5 text-success" strokeWidth={1.8} />
-          <span>No open loops with {person.name}</span>
+          <span>No open commitment or dependency records with {person.name}</span>
         </div>
       )}
     </Card>

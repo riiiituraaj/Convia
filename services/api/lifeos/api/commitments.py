@@ -7,6 +7,7 @@ from lifeos.core.database import get_db
 from lifeos.api.deps import get_current_user
 from lifeos.models.user import User
 from lifeos.models.commitment import Commitment
+from lifeos.models.mission import Mission
 from lifeos.schemas.commitment import CommitmentCreate, CommitmentUpdate, CommitmentResponse
 from lifeos.engines.commitment_engine import CommitmentEngine
 from lifeos.core.event_bus import event_bus
@@ -20,6 +21,13 @@ async def create_commitment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    if payload.mission_id:
+        owned_mission = await db.execute(
+            select(Mission.id).where(Mission.id == payload.mission_id, Mission.user_id == current_user.id)
+        )
+        if not owned_mission.first():
+            raise HTTPException(status_code=404, detail="Mission not found")
+
     commitment = Commitment(
         user_id=current_user.id,
         action=payload.action,

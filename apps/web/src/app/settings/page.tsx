@@ -27,12 +27,12 @@ import { useToast } from "@/components/ui/Toast";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const AUTONOMY_LEVELS = [
-  { level: 0, label: "Full manual", description: "Nothing runs without you." },
-  { level: 1, label: "Suggestions only", description: "CONVIA proposes; you execute." },
-  { level: 2, label: "Low-risk auto", description: "Reversible low-risk actions auto-run." },
-  { level: 3, label: "Balanced (default)", description: "Medium-risk actions need approval." },
-  { level: 4, label: "High trust", description: "Only high-risk actions need approval." },
-  { level: 5, label: "Full auto", description: "CONVIA acts; you review after." },
+  { level: 0, label: "Ask at each step", description: "Preference saved to your profile." },
+  { level: 1, label: "Suggestions first", description: "Preference saved to your profile." },
+  { level: 2, label: "Prefer reversible work", description: "Preference saved to your profile." },
+  { level: 3, label: "Balanced review", description: "Preference saved to your profile." },
+  { level: 4, label: "Review exceptions", description: "Preference saved to your profile." },
+  { level: 5, label: "Review summaries", description: "Preference saved to your profile." },
 ];
 
 export default function SettingsPage() {
@@ -99,7 +99,7 @@ export default function SettingsPage() {
       <PageHeader
         eyebrow="Preferences & control"
         title="Settings"
-        description="Tune how much autonomy CONVIA has, how it talks to you, and where it thinks you are."
+        description="Manage account preferences and inspect the integrations available in this build."
         icon={<Settings className="h-5 w-5" strokeWidth={1.75} />}
         meta={
           <>
@@ -152,7 +152,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="text-[15px] font-semibold text-ink">Autonomy level</h2>
             <p className="text-[12.5px] text-ink-secondary">
-              How much CONVIA is allowed to do before asking you.
+              A saved preference for future workflows. It does not grant execution permissions.
             </p>
           </div>
         </div>
@@ -195,10 +195,9 @@ export default function SettingsPage() {
 
         <div className="mt-4 rounded-xl border border-warning-light bg-warning-light/50 p-3.5">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B87A0E]" strokeWidth={1.8} />
-            <p className="text-[12.5px] leading-relaxed text-[#8A5A00]">
-              Regardless of level, every meaningful action still creates an Action Passport.
-              High-risk and irreversible actions always require explicit approval.
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" strokeWidth={1.8} />
+            <p className="text-[12.5px] leading-relaxed text-warning">
+              External action handlers are not connected. Approval records a decision only and does not execute or verify an action.
             </p>
           </div>
         </div>
@@ -213,8 +212,7 @@ export default function SettingsPage() {
           <div className="flex-1">
             <h2 className="text-[15px] font-semibold text-ink">Voice interface</h2>
             <p className="text-[12.5px] text-ink-secondary">
-              Browser Web Speech today · Nemotron responses · NVIDIA Parakeet ASR/TTS{" "}
-              <span className="font-medium text-warning">Coming Soon</span>
+              Browser speech depends on the device and network. Optional NVIDIA transcription uploads audio only when selected in Hanni; spoken replies use your browser.
             </p>
           </div>
           <button
@@ -295,8 +293,8 @@ export default function SettingsPage() {
               <h2 className="text-[15px] font-semibold text-ink">Session</h2>
               <p className="text-[12.5px] text-ink-secondary">
                 {isAuthenticated()
-                  ? "You are signed in. Signing out clears the local token."
-                  : "You are browsing as guest. Sign in for a persistent account."}
+                ? "You are signed in. Signing out clears this browser's token."
+                  : "Sign in to open your private workspace."}
               </p>
             </div>
           </div>

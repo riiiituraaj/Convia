@@ -118,7 +118,7 @@ export default function MemoryCenterPage() {
         <EmptyState
           icon={Brain}
           title="No memories yet"
-          description="Add an explicit instruction, or capture an intent so CONVIA can derive preferences."
+          description="Add a user-stated note or preference. Saved memories are not currently added to model prompts."
           action={
             <Button variant="secondary" onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4" />
@@ -153,7 +153,7 @@ export default function MemoryCenterPage() {
 
               <div className="mt-4 flex items-center justify-between border-t border-line-subtle pt-3">
                 <span className="text-[11.5px] text-ink-muted">
-                  Source: {mem.source} · {Math.round(mem.confidence * 100)}% confidence
+                  Source: {mem.source} · User-visible memory
                 </span>
                 <Button
                   size="sm"
@@ -174,7 +174,7 @@ export default function MemoryCenterPage() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         title="Add explicit memory"
-        subtitle="A permanent instruction CONVIA should always respect"
+        subtitle="A user-stated note saved for your reference"
         eyebrow="Structured knowledge"
         icon={<Brain className="h-4 w-4" strokeWidth={1.8} />}
         footer={
@@ -199,7 +199,7 @@ export default function MemoryCenterPage() {
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as MemoryItem["category"])}
             >
-              <option value="EXPLICIT">EXPLICIT — permanent instruction</option>
+              <option value="EXPLICIT">EXPLICIT — user-stated note</option>
               <option value="MISSION">MISSION — tied to an active mission</option>
               <option value="DERIVED_PREFERENCE">DERIVED_PREFERENCE — habit or preference</option>
               <option value="EXTERNAL_KNOWLEDGE">EXTERNAL_KNOWLEDGE — fact from research</option>
@@ -212,7 +212,7 @@ export default function MemoryCenterPage() {
               rows={4}
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
-              placeholder="e.g. Always reserve an aisle seat on flights longer than 2 hours."
+              placeholder="e.g. I prefer an aisle seat on longer flights."
             />
           </Field>
         </div>

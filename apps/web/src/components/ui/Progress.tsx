@@ -14,7 +14,7 @@ export interface ProgressRingProps {
   children?: React.ReactNode;
 }
 
-/** Elegant circular progress indicator used by the Continuity Score. */
+/** Circular indicator for a percentage value. */
 export const ProgressRing: React.FC<ProgressRingProps> = ({
   value,
   size = 132,

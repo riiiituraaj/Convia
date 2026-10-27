@@ -8,6 +8,7 @@ import { prettyLabel, riskTone } from "@/lib/ui";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge, StatusBadge } from "@/components/ui/Badge";
+import { useToast } from "@/components/ui/Toast";
 
 interface ActionPassportModalProps {
   passport: ActionPassport | null;
@@ -17,8 +18,8 @@ interface ActionPassportModalProps {
 }
 
 /**
- * Action Passport: human approval gate for anything CONVIA wants to execute.
- * Behaviour is unchanged — only the presentation was brought into the CONVIA system.
+ * Action Passport: record a user's decision on a proposed operation.
+ * No external execution handler is connected in this build.
  */
 export const ActionPassportModal: React.FC<ActionPassportModalProps> = ({
   passport,
@@ -28,6 +29,7 @@ export const ActionPassportModal: React.FC<ActionPassportModalProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [decidedPassport, setDecidedPassport] = useState<ActionPassport | null>(null);
+  const { toast } = useToast();
 
   // A new passport always starts from the server state.
   useEffect(() => {
@@ -38,15 +40,25 @@ export const ActionPassportModal: React.FC<ActionPassportModalProps> = ({
 
   const current = decidedPassport || passport;
   const isPending = current.status === "PENDING_APPROVAL";
+  const isLegacyExecutionStatus = current.status === "EXECUTED" || current.status === "VERIFIED";
 
   const handleDecision = async (decision: "APPROVE" | "REJECT") => {
     try {
       setLoading(true);
       const res = await api.decideAction(current.id, decision);
       setDecidedPassport(res);
+      toast({
+        title: decision === "APPROVE" ? "Approval recorded" : "Proposal rejected",
+        description: res.execution_result?.message || "Your decision has been saved.",
+        tone: decision === "APPROVE" ? "success" : "info",
+      });
       if (onActionDecided) onActionDecided();
     } catch (error) {
-      console.error("Failed to execute action decision", error);
+      toast({
+        title: "Could not save your decision",
+        description: error instanceof Error ? error.message : "The server rejected the request.",
+        tone: "danger",
+      });
     } finally {
       setLoading(false);
     }
@@ -58,7 +70,7 @@ export const ActionPassportModal: React.FC<ActionPassportModalProps> = ({
       onClose={onClose}
       title="Action passport"
       subtitle="Autonomy control & human approval"
-      eyebrow="Awaiting your decision"
+      eyebrow={isPending ? "Awaiting your decision" : "Decision recorded"}
       icon={<ShieldCheck className="h-4 w-4" strokeWidth={1.8} />}
       maxWidth="md"
       footer={
@@ -70,7 +82,7 @@ export const ActionPassportModal: React.FC<ActionPassportModalProps> = ({
             </Button>
             <Button onClick={() => handleDecision("APPROVE")} loading={loading}>
               <CheckCircle2 className="h-4 w-4" strokeWidth={1.9} />
-              Approve &amp; execute
+              Approve proposal
             </Button>
           </>
         ) : (
@@ -132,21 +144,29 @@ export const ActionPassportModal: React.FC<ActionPassportModalProps> = ({
             </Badge>
           </span>
           <StatusBadge
-            tone={isPending ? "warning" : current.status === "REJECTED" ? "danger" : "success"}
+            tone={
+              isLegacyExecutionStatus
+                ? "warning"
+                : isPending
+                  ? "warning"
+                  : current.status === "REJECTED"
+                    ? "danger"
+                    : "success"
+            }
             dot
-            label={prettyLabel(current.status)}
+            label={isLegacyExecutionStatus ? "Legacy status" : prettyLabel(current.status)}
           />
         </div>
 
-        {current.status === "VERIFIED" && current.verification_record?.conclusion ? (
-          <div className="rounded-xl border border-brand-light bg-brand-pale p-4 animate-fade-in">
-            <div className="flex items-center gap-2 text-[12.5px] font-semibold text-brand-mid">
-              <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
-              Verification confirmed by CONVIA
-            </div>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-ink-secondary">
-              {current.verification_record.conclusion}
-            </p>
+        {isLegacyExecutionStatus ? (
+          <div className="rounded-xl border border-[#F7E2B8] bg-warning-light p-4 text-[13px] leading-relaxed text-ink-secondary">
+            This older record has a “{prettyLabel(current.status)}” status. The current build has no connected action or verification handler, so that status is not confirmed here.
+          </div>
+        ) : null}
+
+        {current.status === "APPROVED" ? (
+          <div className="rounded-xl border border-info/20 bg-info-light p-4 text-[13px] leading-relaxed text-ink-secondary">
+            Approval is recorded. No external action ran because this proposal has no connected execution handler.
           </div>
         ) : null}
       </div>

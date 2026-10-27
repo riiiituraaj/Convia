@@ -19,6 +19,72 @@ const selectHanniVoice = (voices: SpeechSynthesisVoice[]) => {
   );
 };
 
+const speechRecognitionErrorMessage = (error: string) => {
+  switch (error) {
+    case "not-allowed":
+      return "The browser blocked microphone or speech access. Check site and Windows microphone permissions.";
+    case "service-not-allowed":
+      return "The browser speech service is blocked or unavailable. Check browser settings or try Chrome/Edge.";
+    case "audio-capture":
+      return "The browser cannot access a microphone input. Check the selected input device and Windows privacy settings.";
+    case "network":
+      return "The browser speech service could not be reached. Check your internet connection, VPN, or firewall.";
+    case "no-speech":
+      return "No speech was detected. Check the selected microphone, then try speaking again after Listen starts.";
+    case "language-not-supported":
+      return "This browser speech service does not support the selected language (English US).";
+    case "aborted":
+      return "Listening was interrupted. Press Listen to try again.";
+    default:
+      return "Browser speech stopped. Check microphone access and try again, or type below.";
+  }
+};
+
+const recordedAudioToWav = async (recording: Blob): Promise<Blob> => {
+  const sourceContext = new AudioContext();
+  try {
+    const decoded = await sourceContext.decodeAudioData(await recording.arrayBuffer());
+    const sampleRate = 16_000;
+    const frameCount = Math.max(1, Math.ceil(decoded.duration * sampleRate));
+    const outputContext = new OfflineAudioContext(1, frameCount, sampleRate);
+    const source = outputContext.createBufferSource();
+    source.buffer = decoded;
+    source.connect(outputContext.destination);
+    source.start();
+    const mono = await outputContext.startRendering();
+    const samples = mono.getChannelData(0);
+    const wav = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(wav);
+    const writeText = (offset: number, value: string) => {
+      for (let index = 0; index < value.length; index += 1) {
+        view.setUint8(offset + index, value.charCodeAt(index));
+      }
+    };
+
+    writeText(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeText(8, "WAVE");
+    writeText(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeText(36, "data");
+    view.setUint32(40, samples.length * 2, true);
+    for (let index = 0; index < samples.length; index += 1) {
+      const sample = Math.max(-1, Math.min(1, samples[index]));
+      view.setInt16(44 + index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    }
+
+    return new Blob([wav], { type: "audio/wav" });
+  } finally {
+    await sourceContext.close();
+  }
+};
+
 interface VoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,13 +109,18 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
   const [response, setResponse] = useState("");
   const [providerUsed, setProviderUsed] = useState<string | null>(null);
   const [orbState, setOrbState] = useState<OrbState>("IDLE");
-  const [statusMessage, setStatusMessage] = useState("Listening for your intent...");
+  const [statusMessage, setStatusMessage] = useState("Voice input ready.");
   const [ttsMode, setTtsMode] = useState<"browser" | "none">("browser");
-  const [sttMode, setSttMode] = useState<"browser" | "server" | "unavailable">("browser");
-  const [isRecording, setIsRecording] = useState(false);
+  const [sttMode, setSttMode] = useState<"browser" | "unavailable">("unavailable");
+  const [isListening, setIsListening] = useState(false);
+  const [isServerRecording, setIsServerRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const recognitionRef = React.useRef<any>(null);
-  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
-  const chunksRef = React.useRef<Blob[]>([]);
+  const speechFailedRef = React.useRef(false);
+  const recorderRef = React.useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = React.useRef<MediaStream | null>(null);
+  const recordingChunksRef = React.useRef<Blob[]>([]);
+  const recordingTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && isOpen) {
@@ -57,42 +128,47 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
       if (SpeechRecognition) {
+        setSttMode("browser");
         const recog = new SpeechRecognition();
         recog.continuous = false;
         recog.interimResults = true;
         recog.lang = "en-US";
 
         recog.onstart = () => {
+          speechFailedRef.current = false;
           setOrbState("LISTENING");
           setStatusMessage("Speak naturally. Hanni is listening...");
         };
 
         recog.onresult = (event: any) => {
           let text = "";
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
+          for (let i = 0; i < event.results.length; ++i) {
             text += event.results[i][0].transcript;
           }
           setTranscript(text);
         };
 
-        recog.onerror = () => {
+        recog.onerror = (event: any) => {
+          speechFailedRef.current = true;
+          setIsListening(false);
           setOrbState("IDLE");
-          setStatusMessage("Microphone paused. You can also type below.");
+          const error = typeof event.error === "string" ? event.error : "unknown";
+          setStatusMessage(`${speechRecognitionErrorMessage(error)} (Error: ${error})`);
         };
 
         recog.onend = () => {
+          setIsListening(false);
           setOrbState("IDLE");
+          if (!speechFailedRef.current) {
+            setStatusMessage("Listening stopped. Review the transcript, then choose Process intent.");
+          }
         };
 
         recognitionRef.current = recog;
-        try {
-          recog.start();
-        } catch (error) {
-          // Already started, or microphone permission not granted yet.
-        }
+        setStatusMessage("Browser speech is ready. Press Listen to start, or type below.");
       } else {
-        setSttMode("server");
-        setStatusMessage("Web Speech unavailable — use Record for server ASR, or type below.");
+        setSttMode("unavailable");
+        setStatusMessage("Browser speech is unavailable. Use NVIDIA recording or type below.");
       }
     }
 
@@ -109,76 +185,175 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
           // Ignore stop failures during unmount.
         }
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      const recorder = recorderRef.current;
+      if (recorder && recorder.state !== "inactive") {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        recorder.onerror = null;
         try {
-          mediaRecorderRef.current.stop();
+          recorder.stop();
         } catch {
-          // ignore
+          // Ignore stop failures during unmount.
         }
       }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
     };
   }, [isOpen]);
 
-  const startServerRecording = async () => {
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setSttMode("unavailable");
-      setStatusMessage("Microphone unavailable. Type your intent below.");
-      return;
-    }
-
+  const startBrowserListening = () => {
+    if (!recognitionRef.current || sttMode !== "browser") return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-          ? "audio/mp4"
-          : "";
-      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      chunksRef.current = [];
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
-      };
-
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop());
-        setIsRecording(false);
-        setOrbState("THINKING");
-        setStatusMessage("Transcribing with server ASR…");
-        try {
-          const blob = new Blob(chunksRef.current, { type: mime || "audio/webm" });
-          const result = await api.transcribeAudio(blob, mime === "audio/mp4" ? "audio.m4a" : "audio.webm");
-          if (result.transcript) {
-            setTranscript(result.transcript);
-            setSttMode(result.provider?.toLowerCase().includes("browser") ? "browser" : "server");
-            setStatusMessage("Transcript ready. Process the intent when you are set.");
-            setOrbState("IDLE");
-          } else {
-            setSttMode("unavailable");
-            setOrbState("IDLE");
-            setStatusMessage(result.message || result.error || "Server ASR unavailable — type your intent.");
-          }
-        } catch {
-          setSttMode("unavailable");
-          setOrbState("ERROR");
-          setStatusMessage("Server transcription failed. Type your intent below.");
-        }
-      };
-
-      recorder.start();
-      setIsRecording(true);
-      setOrbState("LISTENING");
-      setStatusMessage("Recording… speak clearly, then stop.");
+      recognitionRef.current.start();
+      setIsListening(true);
     } catch {
-      setSttMode("unavailable");
-      setStatusMessage("Microphone permission denied. Type your intent below.");
+      setIsListening(false);
+      setStatusMessage("Microphone could not start. Check browser permission, or type below.");
+    }
+  };
+
+  const stopBrowserListening = () => {
+    if (recognitionRef.current && isListening) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        setIsListening(false);
+      }
     }
   };
 
   const stopServerRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    const recorder = recorderRef.current;
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+    if (recorder && recorder.state === "recording") recorder.stop();
+  };
+
+  const startServerRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setStatusMessage("Audio recording is not supported in this browser. Use Listen or type below.");
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"].find(
+        (candidate) => MediaRecorder.isTypeSupported(candidate)
+      );
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recordingChunksRef.current = [];
+      mediaStreamRef.current = stream;
+      recorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+        stream?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        setIsServerRecording(false);
+        setOrbState("ERROR");
+        setStatusMessage("Audio recording failed. Check the selected microphone, or use Listen or type below.");
+      };
+      recorder.onstop = () => {
+        if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+        stream?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        setIsServerRecording(false);
+        setIsTranscribing(true);
+        setOrbState("THINKING");
+        setStatusMessage("Converting the recording to WAV before sending it for transcription…");
+
+        void (async () => {
+          try {
+            const recording = new Blob(recordingChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+            if (!recording.size) throw new Error("No audio was recorded.");
+            const wav = await recordedAudioToWav(recording);
+            setStatusMessage("Sending the recording to NVIDIA for transcription…");
+            const result = await api.transcribeAudio(wav, "voice.wav");
+            if (!result.transcript?.trim()) {
+              setOrbState("ERROR");
+              setStatusMessage(result.message || "NVIDIA returned no transcript. Try a clearer recording.");
+              return;
+            }
+            setTranscript((current) => current.trim()
+              ? `${current.trim()} ${result.transcript.trim()}`
+              : result.transcript.trim());
+            setOrbState("IDLE");
+            setStatusMessage("NVIDIA transcript ready. Review it, then choose Process intent.");
+          } catch (error) {
+            setOrbState("ERROR");
+            setStatusMessage(
+              error instanceof Error
+                ? `Server transcription failed. ${error.message}`
+                : "Server transcription failed. Check the API connection and try again."
+            );
+          } finally {
+            setIsTranscribing(false);
+          }
+        })();
+      };
+
+      recorder.start();
+      setIsServerRecording(true);
+      setOrbState("LISTENING");
+      setStatusMessage("Recording for NVIDIA transcription. Stop when you finish speaking.");
+      recordingTimeoutRef.current = setTimeout(() => {
+        setStatusMessage("Recording limit reached. Transcribing now…");
+        if (recorder.state === "recording") recorder.stop();
+      }, 60_000);
+    } catch (error) {
+      stream?.getTracks().forEach((track) => track.stop());
+      setIsServerRecording(false);
+      setOrbState("ERROR");
+      setStatusMessage(
+        error instanceof Error && error.name === "NotAllowedError"
+          ? "Microphone permission was denied. Allow it in the browser and Windows settings, or type below."
+          : "Could not start audio recording. Check your microphone input, or use Listen or type below."
+      );
+    }
+  };
+
+  const speakResponse = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setTtsMode("none");
+      setStatusMessage("Browser speech playback is unavailable. Read the reply below.");
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const speak = () => {
+      const voice = selectHanniVoice(window.speechSynthesis.getVoices());
+      if (voice) utterance.voice = voice;
+      utterance.rate = 0.88;
+      utterance.pitch = 1.08;
+      utterance.volume = 0.86;
+      utterance.onend = () => {
+        setOrbState("IDLE");
+        setStatusMessage("Reply finished. You can replay it below.");
+      };
+      utterance.onerror = () => {
+        setOrbState("IDLE");
+        setStatusMessage("Browser could not play the reply. Try Speak reply again, or read it below.");
+      };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      setOrbState("SPEAKING");
+      setTtsMode("browser");
+      setStatusMessage("Speaking reply...");
+    };
+
+    if (window.speechSynthesis.getVoices().length) {
+      speak();
+    } else {
+      setStatusMessage("Waiting for a browser voice...");
+      window.speechSynthesis.addEventListener("voiceschanged", speak, { once: true });
     }
   };
 
@@ -187,56 +362,48 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
     if (!text.trim()) return;
 
     try {
-      setOrbState("THINKING");
-      setStatusMessage("Hanni is thinking through your next step...");
-
-      const voiceResult = await api.respondToVoice(text);
-      setResponse(voiceResult.text_response);
-      setProviderUsed(voiceResult.provider_used ?? null);
-
       setOrbState("WORKING");
-      setStatusMessage("Extracting commitments and updating the continuity loop...");
-      await api.parseIntent(text, "voice");
+      setStatusMessage("Saving your capture…");
+      const captureResult = await api.parseIntent(text, "voice");
+      const captureSummary =
+        captureResult?.summary_message ?? "Your capture was saved. Review it in your workspace.";
+      let spokenText = captureSummary;
+      let replyReady = false;
+      setResponse(captureSummary);
+      setProviderUsed("local-capture-summary");
 
-      if (
-        voiceResult.audio_url &&
-        typeof window !== "undefined" &&
-        "speechSynthesis" in window
-      ) {
-        // Server TTS URL not part of current browser flow — fall through to browser voice.
-        setTtsMode("browser");
+      setOrbState("THINKING");
+      setStatusMessage("Capture saved. Preparing an optional AI voice reply…");
+      try {
+        const voiceResult = await api.respondToVoice(text);
+        spokenText = voiceResult.text_response;
+        setResponse(voiceResult.text_response);
+        setProviderUsed(voiceResult.provider_used ?? null);
+        replyReady = true;
+      } catch {
+        setStatusMessage(
+          "Capture saved. The configured AI provider is unavailable, so the saved summary is shown instead."
+        );
       }
 
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(voiceResult.text_response);
-        const speak = () => {
-          const voice = selectHanniVoice(window.speechSynthesis.getVoices());
-          if (voice) utterance.voice = voice;
-          utterance.rate = 0.88;
-          utterance.pitch = 1.08;
-          utterance.volume = 0.86;
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(utterance);
-        };
-        setOrbState("SPEAKING");
-        setTtsMode("browser");
-        utterance.onend = () => setOrbState("IDLE");
-        if (window.speechSynthesis.getVoices().length) {
-          speak();
-        } else {
-          window.speechSynthesis.addEventListener("voiceschanged", speak, { once: true });
-        }
-      } else {
-        setTtsMode("none");
-        setOrbState("IDLE");
-      }
-
-      setStatusMessage("Hanni captured the thread and updated your continuity surface.");
+      setOrbState("IDLE");
+      setStatusMessage(
+        replyReady
+          ? "Capture saved. AI reply is shown below."
+          : "Capture saved. Local summary is shown below."
+      );
+      speakResponse(spokenText);
       if (onCommitmentCreated) onCommitmentCreated();
     } catch (error) {
       console.error("Voice processing error", error);
       setOrbState("ERROR");
-      setStatusMessage("Could not complete the reasoning request.");
+      const message =
+        error instanceof TypeError && /fetch/i.test(error.message)
+          ? "Can't reach the CONVIA API. Start the local API at http://localhost:8000 and retry."
+          : error instanceof Error
+            ? error.message
+            : "Could not save this capture.";
+      setStatusMessage(`Capture failed. ${message}`);
     }
   };
 
@@ -244,7 +411,8 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
     const flagshipText =
       "CONVIA, I start my internship in Bangalore in 21 days. I need housing, travel, documents, and I promised my team I would finish the API tonight. Keep everything on track and keep me under ₹80,000.";
     setTranscript(flagshipText);
-    handleProcessIntent(flagshipText);
+    setResponse("");
+    setStatusMessage("Example prompt added. Review it, then choose Process intent to save it.");
   };
 
   return (
@@ -259,7 +427,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
         <>
           <Button variant="ghost" size="md" onClick={handleQuickDemoPrompt}>
             <Sparkles className="h-3.5 w-3.5" strokeWidth={1.9} />
-            Use flagship prompt
+            Fill example prompt
           </Button>
           <Button size="md" onClick={() => handleProcessIntent()} disabled={!transcript.trim()}>
             Process intent
@@ -288,18 +456,36 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
                 dot
                 label={orbState === "IDLE" ? "Ready" : orbState.toLowerCase()}
               />
-              {sttMode === "server" ? (
+              {sttMode === "browser" ? (
                 <Button
                   size="sm"
-                  variant={isRecording ? "danger" : "outline"}
-                  onClick={isRecording ? stopServerRecording : startServerRecording}
+                  variant={isListening ? "danger" : "outline"}
+                  onClick={isListening ? stopBrowserListening : startBrowserListening}
+                  disabled={isServerRecording || isTranscribing}
                 >
-                  {isRecording ? "Stop recording" : "Record (server ASR)"}
+                  <Mic className="mr-1.5 h-3.5 w-3.5" />
+                  {isListening ? "Stop listening" : "Listen"}
                 </Button>
               ) : null}
+              <Button
+                size="sm"
+                variant={isServerRecording ? "danger" : "outline"}
+                onClick={isServerRecording ? stopServerRecording : startServerRecording}
+                disabled={isTranscribing || (isListening && !isServerRecording)}
+              >
+                <Mic className="mr-1.5 h-3.5 w-3.5" />
+                {isTranscribing
+                  ? "Transcribing…"
+                  : isServerRecording
+                    ? "Stop & transcribe"
+                    : "Record with NVIDIA"}
+              </Button>
             </div>
             <p className="mt-1.5 text-[13px] leading-relaxed text-ink-secondary">
               {statusMessage}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">
+              Choosing Record with NVIDIA uploads the recording through CONVIA&apos;s API to NVIDIA for transcription.
             </p>
           </div>
         </div>
@@ -325,27 +511,46 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
             <div className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-brand-mid">
               <Volume2 className="h-3.5 w-3.5" strokeWidth={2} />
               Hanni&apos;s response
+              {ttsMode === "browser" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => speakResponse(response)}
+                  className="ml-auto normal-case tracking-normal"
+                >
+                  <Volume2 className="mr-1.5 h-3.5 w-3.5" />
+                  Speak reply
+                </Button>
+              ) : null}
               {providerUsed ? (
                 <span
                   className={
-                    /local-deterministic|fallback/i.test(providerUsed)
-                      ? "ml-auto rounded-full border border-[#F7E2B8] bg-warning-light px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-[#B87A0E]"
-                      : "ml-auto rounded-full border border-brand-light bg-white/70 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-brand-mid"
+                    /local-deterministic|fallback|local-capture-summary/i.test(providerUsed)
+                      ? "ml-auto rounded-full border border-[#F7E2B8] bg-warning-light px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-warning"
+                      : "ml-auto rounded-full border border-brand-light bg-surface px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-brand-mid"
                   }
                   title={
-                    /local-deterministic|fallback/i.test(providerUsed)
-                      ? "No live LLM API key — deterministic local reply"
+                    /local-capture-summary/i.test(providerUsed)
+                      ? "Saved capture summary; no AI voice response was available"
+                      : /local-deterministic|fallback/i.test(providerUsed)
+                        ? "Deterministic local reply; no live model response"
                       : "Live model"
                   }
                 >
-                  {/local-deterministic|fallback/i.test(providerUsed) ? "Local mode" : providerUsed}
+                  {/local-deterministic|fallback|local-capture-summary/i.test(providerUsed)
+                    ? "Local mode"
+                    : providerUsed}
                 </span>
               ) : null}
             </div>
             <p className="mt-2 text-[13.5px] leading-relaxed text-ink-secondary">{response}</p>
-            {providerUsed && /local-deterministic|fallback/i.test(providerUsed) ? (
+            {providerUsed && /local-capture-summary/i.test(providerUsed) ? (
               <p className="mt-1.5 text-[11.5px] text-ink-muted">
-                Model: {providerUsed} — add NVIDIA/Nebius credentials for full CONVIA AI.
+                This is the saved capture summary, not an AI generated reply.
+              </p>
+            ) : providerUsed && /local-deterministic|fallback/i.test(providerUsed) ? (
+              <p className="mt-1.5 text-[11.5px] text-ink-muted">
+                Model: {providerUsed} — check the selected provider configuration for a live model reply.
               </p>
             ) : null}
           </div>
@@ -360,28 +565,19 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
               Listening:{" "}
               <span className="font-medium text-ink">
                 {sttMode === "browser"
-                  ? "Browser Web Speech API"
-                  : sttMode === "server"
-                    ? "Server ASR via MediaRecorder → POST /voice/transcribe"
-                    : "Unavailable — type instead"}
+                  ? "Browser speech recognition available"
+                  : "Browser recognition unavailable — use NVIDIA recording or type"}
               </span>
             </li>
             <li>
               Speaking:{" "}
               <span className="font-medium text-ink">
                 {ttsMode === "browser"
-                  ? "Browser speech synthesis"
+                  ? "Browser speech synthesis available"
                   : "Unavailable — read the reply"}
               </span>
             </li>
-            <li>
-              NVIDIA Parakeet:{" "}
-              <span className="font-medium text-warning">Coming Soon</span>
-              <span className="text-ink-muted">
-                {" "}
-                — /voice/transcribe is wired; needs NVIDIA credentials for live ASR.
-              </span>
-            </li>
+            <li>Server ASR: optional NVIDIA transcription. Audio is sent only when you choose Record with NVIDIA.</li>
           </ul>
         </div>
       </div>

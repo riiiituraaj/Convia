@@ -30,7 +30,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     )}
   >
     {branded ? (
-      <Logo variant="dark" className="mb-5 h-7 opacity-80" />
+      <Logo variant="dark" className="mb-5 h-7" />
     ) : Icon ? (
       <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface text-ink-muted">
         <Icon className="h-5 w-5" strokeWidth={1.6} />
