@@ -113,16 +113,6 @@ $env:PYTHONPATH = "."
 python -m pytest tests -q
 ```
 
-Frontend checks:
-
-```powershell
-cd apps/web
-npm run lint
-npm run typecheck
-npm run build
-```
-
-These checks do not prove live provider access or production deployment. Run the optional provider smoke tests described in [Operations](docs/OPERATIONS.md) only when the corresponding credentials are configured.
 
 ## Security notes
 
