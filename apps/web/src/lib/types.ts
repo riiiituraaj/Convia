@@ -385,6 +385,34 @@ export interface IntegrationItem {
   metadata_json: Record<string, any>;
 }
 
+export interface GoogleMessageItem {
+  id: string;
+  thread_id?: string | null;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  snippet: string;
+  unread: boolean;
+}
+
+export interface GoogleCalendarEventItem {
+  id: string;
+  summary: string;
+  start?: string;
+  end?: string;
+  location?: string;
+  html_link?: string;
+}
+
+export interface GoogleDriveFileItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  modifiedTime?: string;
+  webViewLink?: string;
+}
+
 export interface BlindSpotsData {
   total_found: number;
   unresolved_dependencies: Array<Record<string, any>>;

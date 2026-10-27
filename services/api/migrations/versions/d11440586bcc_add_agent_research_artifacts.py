@@ -92,7 +92,7 @@ def upgrade() -> None:
         sa.Column('output_payload', sa.JSON(), nullable=False),
         sa.Column('status', sa.String(length=30), nullable=False, server_default="PENDING"),
         sa.Column('error_message', sa.Text(), nullable=True),
-        sa.Column('requires_approval', sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column('requires_approval', sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column('action_passport_id', sa.String(length=36), nullable=True),
         sa.Column('idempotency_key', sa.String(length=128), nullable=True),
         sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),

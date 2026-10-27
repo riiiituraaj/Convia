@@ -27,6 +27,9 @@ Values in `.env.example` are placeholders. Never commit `.env` or provider keys.
 | `TAVILY_API_KEY` | Backend Tavily Search authentication | Optional | Yes | Omit for explicit unavailable state; never put in frontend variables |
 | `TAVILY_TIMEOUT_SECONDS` | API Tavily request timeout | No | No | `20`, bounded from 1 to 60 |
 | `TAVILY_MAX_RESULTS` | Maximum normalized source count | No | No | `5`, bounded from 1 to 10 |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web application client ID | No | No | Set with the client secret and exact redirect URI to enable Gmail, Calendar, and Drive read-only access |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Web application client secret | No | Yes | Server-side secret; never expose to the web build |
+| `GOOGLE_REDIRECT_URI` | Exact Google OAuth callback URL | No | No | `https://YOUR_PUBLIC_HOST/api/integrations/google/callback`; public IP literals are not accepted by Google for web OAuth |
 | `DOCUMENT_STORAGE_DIR` | API directory for private original document uploads | No | No | `local_data/documents`; mount persistent private storage for deployments |
 | `DOCUMENT_MAX_UPLOAD_BYTES` | Maximum size per document upload | No | No | `15728640` (15 MiB), bounded from 1 KiB to 50 MiB |
 | `DOCUMENT_MAX_USER_BYTES` | Total original file storage allowed per account | No | No | `262144000` (250 MiB), bounded from 1 MiB to 10 GiB |
@@ -34,6 +37,8 @@ Values in `.env.example` are placeholders. Never commit `.env` or provider keys.
 | `NEXT_PUBLIC_API_URL` | Browser API base URL used at frontend build time | Yes for non-default host | No | `http://localhost:8000/api` locally; public browser configuration only |
 
 ## Provider notes
+
+Google Workspace setup, required APIs, OAuth scopes, and deployment steps are documented in [Google Workspace integration](GOOGLE_WORKSPACE.md).
 
 Nebius documents an OpenAI compatible inference API at `https://api.tokenfactory.nebius.com/v1`; see [Nebius Token Factory API docs](https://api.tokenfactory.nebius.com/docs). NVIDIA documents its NIM OpenAI compatible LLM endpoints at `https://integrate.api.nvidia.com/v1`; see [NVIDIA NIM LLM APIs](https://docs.api.nvidia.com/nim/reference/llm-apis). Model availability depends on account access, so CONVIA intentionally leaves model IDs blank rather than assuming an example model is available.
 

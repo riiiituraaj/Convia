@@ -32,11 +32,11 @@ Agent runs and ordered steps are stored in the relational database with lifecycl
 
 Execution currently happens synchronously inside the API request. There is no durable queue or worker, and a blocked interrupted step does not have automatic outcome reconciliation. The API exposes pause, resume, cancel, and failed-step retry controls for persisted runs.
 
-Approval changes an action passport state only. There are no connected calendar, email, payment, or travel booking handlers, and approval never reports execution or verification.
+Approval changes an action passport state only. Google Calendar and Gmail have read-only browsing endpoints; there are no calendar/email write handlers, payment handlers, or travel booking handlers, and approval never reports execution or verification.
 
 ## Data and ownership
 
-SQLAlchemy models and account-owned routes cover users, conversations/messages, missions and graph nodes, commitments/events, risks, action passports, memories, integrations, audits, agent runs/steps, documents/chunks, research sessions/sources, and artifacts. Protected reads and writes include the authenticated user ID. Conversation messages carry request idempotency keys; research source IDs are scoped to a research session to prevent cross-session primary-key collisions.
+SQLAlchemy models and account-owned routes cover users, conversations/messages, missions and graph nodes, commitments/events, risks, action passports, memories, integrations, audits, agent runs/steps, documents/chunks, research sessions/sources, and artifacts. Protected reads and writes include the authenticated user ID. Conversation messages carry request idempotency keys; research source IDs are scoped to a research session to prevent cross-session primary-key collisions. Google Workspace OAuth credentials are encrypted with AES-GCM before storage; Gmail, Calendar, and Drive access is read-only and token material is excluded from status responses.
 
 Document files use generated storage keys beneath `DOCUMENT_STORAGE_DIR`; filenames and extracted text are stored separately. Uploads have per-file and per-account bounds. Extraction supports PDF, DOCX, PPTX, XLSX, TXT, Markdown, and CSV. The vault does not perform OCR or embeddings, and there is no in-app binary preview.
 

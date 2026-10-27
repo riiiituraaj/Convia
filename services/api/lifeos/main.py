@@ -22,6 +22,7 @@ from lifeos.api.documents import router as documents_router
 from lifeos.api.artifacts import router as artifacts_router
 from lifeos.api.travel import router as travel_router
 from lifeos.api.workspaces import router as workspaces_router
+from lifeos.api.google_integrations import router as google_integrations_router
 
 
 @asynccontextmanager
@@ -80,6 +81,7 @@ app.include_router(documents_router, prefix=settings.API_V1_STR)
 app.include_router(artifacts_router, prefix=settings.API_V1_STR)
 app.include_router(travel_router, prefix=settings.API_V1_STR)
 app.include_router(workspaces_router, prefix=settings.API_V1_STR)
+app.include_router(google_integrations_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health")

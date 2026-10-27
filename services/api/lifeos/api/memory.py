@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from typing import List
+import ipaddress
+from urllib.parse import urlsplit
 from lifeos.core.database import get_db
 from lifeos.api.deps import get_current_user
 from lifeos.models.user import User
@@ -12,6 +14,20 @@ from lifeos.core.config import settings
 
 memory_router = APIRouter(prefix="/memory", tags=["memory"])
 integrations_router = APIRouter(prefix="/integrations", tags=["integrations"])
+
+
+def _google_oauth_is_configured() -> bool:
+    if not (settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_REDIRECT_URI):
+        return False
+    parsed = urlsplit(settings.GOOGLE_REDIRECT_URI)
+    hostname = (parsed.hostname or "").lower()
+    local_host = hostname in {"localhost", "127.0.0.1", "::1"}
+    try:
+        ipaddress.ip_address(hostname)
+        raw_ip_host = not local_host
+    except ValueError:
+        raw_ip_host = False
+    return bool(hostname) and (parsed.scheme == "https" or local_host) and not raw_ip_host
 
 
 @memory_router.get("", response_model=List[MemoryResponse])
@@ -78,6 +94,19 @@ async def list_integrations(
     inference_model = settings.NVIDIA_NIM_MODEL if selected_provider == "nvidia" else settings.NEBIUS_NEMOTRON_MODEL
     inference_configured = bool(inference_key and inference_model)
 
+    google_result = await db.execute(select(Integration).where(
+        Integration.user_id == current_user.id,
+        Integration.provider == "google_workspace",
+    ))
+    google_connection = google_result.scalars().first()
+    google_connected = bool(
+        google_connection
+        and google_connection.status == "CONNECTED"
+        and google_connection.credentials_encrypted
+    )
+    google_scopes = set((google_connection.metadata_json or {}).get("scopes", [])) if google_connected else set()
+    google_oauth_configured = _google_oauth_is_configured()
+
     integrations = [
         IntegrationResponse(
             id="tavily_search",
@@ -102,32 +131,38 @@ async def list_integrations(
         IntegrationResponse(
             id="google_calendar",
             provider="Google Calendar",
-            status="COMING_SOON",
-            credentials_present=False,
-            last_synced_at=None,
+            status="CONNECTED" if "https://www.googleapis.com/auth/calendar.readonly" in google_scopes else "NOT_CONNECTED",
+            credentials_present="https://www.googleapis.com/auth/calendar.readonly" in google_scopes,
+            last_synced_at=google_connection.last_synced_at if google_connected else None,
             metadata_json={
-                "purpose": "Schedule conflict detection and work block reservation",
-                "note": "Calendar tool is wired in code but no provider is connected — it fails honestly instead of booking fake events.",
+                "purpose": "Read upcoming Google Calendar events",
+                "note": "Read-only access. CONVIA does not create or edit events.",
+                "oauth_configured": google_oauth_configured,
             }
         ),
         IntegrationResponse(
             id="gmail",
             provider="Gmail",
-            status="COMING_SOON",
-            credentials_present=False,
-            last_synced_at=None,
+            status="CONNECTED" if "https://www.googleapis.com/auth/gmail.readonly" in google_scopes else "NOT_CONNECTED",
+            credentials_present="https://www.googleapis.com/auth/gmail.readonly" in google_scopes,
+            last_synced_at=google_connection.last_synced_at if google_connected else None,
             metadata_json={
-                "purpose": "Inbound commitment detection from stakeholder emails",
-                "note": "Email tool is wired in code but no provider is connected — it fails honestly instead of sending fake mail.",
+                "purpose": "Search and review Gmail messages",
+                "note": "Read-only access. CONVIA does not send or modify email.",
+                "oauth_configured": google_oauth_configured,
             }
         ),
         IntegrationResponse(
             id="google_drive",
             provider="Google Drive",
-            status="COMING_SOON",
-            credentials_present=False,
-            last_synced_at=None,
-            metadata_json={"purpose": "Document scanning and agreement evidence verification"}
+            status="CONNECTED" if "https://www.googleapis.com/auth/drive.metadata.readonly" in google_scopes else "NOT_CONNECTED",
+            credentials_present="https://www.googleapis.com/auth/drive.metadata.readonly" in google_scopes,
+            last_synced_at=google_connection.last_synced_at if google_connected else None,
+            metadata_json={
+                "purpose": "View Google Drive file names and metadata",
+                "note": "Metadata-only access. CONVIA does not download or edit Drive files.",
+                "oauth_configured": google_oauth_configured,
+            }
         ),
         IntegrationResponse(
             id="nvidia_parakeet",

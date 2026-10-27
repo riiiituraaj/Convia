@@ -5,7 +5,11 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+_CONFIG_PATH = Path(__file__).resolve()
+REPOSITORY_ROOT = next(
+    (parent for parent in _CONFIG_PATH.parents if (parent / "docker-compose.yml").is_file()),
+    _CONFIG_PATH.parents[2],  # Docker image layout: /app/lifeos/core/config.py
+)
 
 
 class Settings(BaseSettings):
@@ -37,6 +41,12 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: Optional[str] = None
     TAVILY_TIMEOUT_SECONDS: float = Field(default=20.0, ge=1, le=60)
     TAVILY_MAX_RESULTS: int = Field(default=5, ge=1, le=10)
+
+    # Google Workspace OAuth. Tokens are encrypted at rest using a key derived
+    # from the stable AUTH_SECRET, and the OAuth client secret stays server-side.
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REDIRECT_URI: Optional[str] = None
 
     # Local document storage; mount this path to durable storage in deployments.
     DOCUMENT_STORAGE_DIR: str = str(REPOSITORY_ROOT / "local_data" / "documents")

@@ -7,6 +7,9 @@ import {
   AgentRun,
   MemoryItem,
   IntegrationItem,
+  GoogleMessageItem,
+  GoogleCalendarEventItem,
+  GoogleDriveFileItem,
   BlindSpotsData,
   ResolveDayData,
   PersonProfile,
@@ -371,6 +374,27 @@ class ApiClient {
   // Integrations
   async getIntegrations(): Promise<IntegrationItem[]> {
     return this.request<IntegrationItem[]>("/integrations");
+  }
+
+  async connectGoogle(): Promise<{ authorization_url: string }> {
+    return this.request<{ authorization_url: string }>("/integrations/google/connect", { method: "POST" });
+  }
+
+  async disconnectGoogle(): Promise<{ status: string }> {
+    return this.request<{ status: string }>("/integrations/google", { method: "DELETE" });
+  }
+
+  async getGoogleMessages(q = ""): Promise<{ query: string; messages: GoogleMessageItem[] }> {
+    const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
+    return this.request<{ query: string; messages: GoogleMessageItem[] }>(`/integrations/google/messages${suffix}`);
+  }
+
+  async getGoogleEvents(): Promise<{ events: GoogleCalendarEventItem[] }> {
+    return this.request<{ events: GoogleCalendarEventItem[] }>("/integrations/google/events");
+  }
+
+  async getGoogleFiles(): Promise<{ files: GoogleDriveFileItem[] }> {
+    return this.request<{ files: GoogleDriveFileItem[] }>("/integrations/google/files");
   }
 
   // Voice

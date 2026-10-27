@@ -13,7 +13,7 @@ class AgentState(BaseModel):
     memory: List[Dict[str, Any]] = Field(default_factory=list)
     tool_availability: List[str] = Field(default_factory=lambda: [
         "tavily_search"
-        # calendar_manager / email_dispatcher intentionally omitted until credentials exist.
+        # Calendar/email write tools remain omitted; Google Workspace grants read-only access.
     ])
     agent_results: Dict[str, Any] = Field(default_factory=dict)
     pending_approvals: List[Dict[str, Any]] = Field(default_factory=list)

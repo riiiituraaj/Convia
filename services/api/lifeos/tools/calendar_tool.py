@@ -4,39 +4,39 @@ from lifeos.tools.base import BaseTool, ToolResult
 
 class CalendarTool(BaseTool):
     name = "calendar_manager"
-    description = "Checks schedule conflicts and schedules commitment work blocks."
+    description = "Calendar event creation and editing require write-enabled authorization, which is not granted."
     permission_level = 2 # Medium risk (calendar modification)
     risk_level = "MEDIUM"
 
     async def execute(self, action: str, title: str = "", start_time: str = "", duration_minutes: int = 60) -> ToolResult:
-        # Honest: no calendar provider is wired. Never claim a fake event was booked.
+        # The Google Workspace connection is intentionally read-only.
         return ToolResult(
             success=False,
-            data={"status": "COMING_SOON", "action": action},
+            data={"status": "READ_ONLY", "action": action},
             error=(
-                "Calendar integration is Coming Soon — Google Calendar is not connected. "
-                "No event was created. Connect credentials to enable schedule blocks."
+                "Google Calendar is available for reading events, but this connection cannot create or edit them. "
+                "No event was created or changed."
             ),
-            evidence=["Integrations status: Google Calendar NOT_CONNECTED"],
+            evidence=["Google Workspace permissions are read-only"],
         )
 
 
 class EmailTool(BaseTool):
     name = "email_dispatcher"
-    description = "Drafts and sends emails/follow-ups to teammates and stakeholders."
+    description = "Sending or drafting email requires write-enabled authorization, which is not granted."
     permission_level = 3 # External communication - requires approval
     risk_level = "HIGH"
 
     async def execute(self, action: str, recipient: str = "", subject: str = "", body: str = "") -> ToolResult:
-        # Honest: no mail provider is wired. Never claim a message was sent.
+        # The Google Workspace connection is intentionally read-only.
         return ToolResult(
             success=False,
-            data={"status": "COMING_SOON", "action": action, "recipient": recipient},
+            data={"status": "READ_ONLY", "action": action, "recipient": recipient},
             error=(
-                "Email integration is Coming Soon — Gmail is not connected. "
-                "No draft or send occurred. Connect credentials to enable outbound mail."
+                "Gmail is available for reading, but this connection cannot create drafts or send email. "
+                "No draft or message was created or sent."
             ),
-            evidence=["Integrations status: Gmail NOT_CONNECTED"],
+            evidence=["Google Workspace permissions are read-only"],
         )
 
 

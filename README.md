@@ -133,7 +133,7 @@ These checks do not prove live provider access or production deployment. Run the
 
 ## Product surfaces
 
-The Next.js app contains the landing, login/register, continuity dashboard, conversations, missions, commitments, people, waiting, decisions, risks, agents, activity, memory, documents, library, travel search, search, integrations, and settings pages. Each page is backed by the API where supported; unimplemented external integrations remain unavailable rather than being presented as connected.
+The Next.js app contains the landing, login/register, continuity dashboard, conversations, missions, commitments, people, waiting, decisions, risks, agents, activity, memory, documents, library, travel search, search, integrations, and settings pages. Google Workspace can be connected for read-only Gmail, Calendar, and Drive metadata access; see [Google Workspace setup](docs/GOOGLE_WORKSPACE.md). Other unimplemented external actions remain unavailable rather than being presented as connected.
 
 ## License
 
